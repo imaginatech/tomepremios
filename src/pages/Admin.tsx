@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
@@ -19,6 +18,8 @@ const Admin = () => {
   useEffect(() => {
     if (user) {
       checkAdminStatus();
+    } else {
+      setCheckingAdmin(false);
     }
   }, [user]);
 
@@ -53,7 +54,7 @@ const Admin = () => {
   }
 
   if (!user || !isAdmin) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/admin/login" replace />;
   }
 
   return (
