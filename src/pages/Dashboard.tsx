@@ -94,7 +94,6 @@ const Dashboard = () => {
             {/* Coluna Principal */}
             <div className="lg:col-span-2 space-y-6">
               <UserProfile />
-              <ParticipatedRaffles />
               <ActiveRaffles />
             </div>
             
