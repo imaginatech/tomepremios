@@ -20,6 +20,7 @@ export type Database = {
           full_name: string | null
           id: string
           pix_key: string | null
+          role: string | null
           updated_at: string
           whatsapp: string | null
         }
@@ -28,6 +29,7 @@ export type Database = {
           full_name?: string | null
           id: string
           pix_key?: string | null
+          role?: string | null
           updated_at?: string
           whatsapp?: string | null
         }
@@ -36,6 +38,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           pix_key?: string | null
+          role?: string | null
           updated_at?: string
           whatsapp?: string | null
         }
@@ -78,6 +81,9 @@ export type Database = {
       }
       raffles: {
         Row: {
+          auto_start_next: boolean | null
+          campaign_end_date: string | null
+          campaign_start_date: string | null
           created_at: string
           description: string | null
           draw_date: string
@@ -91,6 +97,9 @@ export type Database = {
           winning_number: number | null
         }
         Insert: {
+          auto_start_next?: boolean | null
+          campaign_end_date?: string | null
+          campaign_start_date?: string | null
           created_at?: string
           description?: string | null
           draw_date: string
@@ -104,6 +113,9 @@ export type Database = {
           winning_number?: number | null
         }
         Update: {
+          auto_start_next?: boolean | null
+          campaign_end_date?: string | null
+          campaign_start_date?: string | null
           created_at?: string
           description?: string | null
           draw_date?: string

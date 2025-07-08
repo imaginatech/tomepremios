@@ -1,17 +1,44 @@
 
-import React, { useState } from 'react';
-import { Trophy, User, LogOut, LayoutDashboard } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Trophy, User, LogOut, LayoutDashboard, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import AuthModal from './AuthModal';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const Header = () => {
   const { user, signOut } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    if (user) {
+      checkAdminStatus();
+    }
+  }, [user]);
+
+  const checkAdminStatus = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user?.id)
+        .single();
+
+      if (!error && data?.role === 'admin') {
+        setIsAdmin(true);
+      } else {
+        setIsAdmin(false);
+      }
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      setIsAdmin(false);
+    }
+  };
 
   const getInitials = (email: string) => {
     return email.slice(0, 2).toUpperCase();
@@ -23,6 +50,10 @@ const Header = () => {
 
   const handleDashboardClick = () => {
     navigate('/dashboard');
+  };
+
+  const handleAdminClick = () => {
+    navigate('/admin');
   };
 
   const handleHomeClick = () => {
@@ -77,6 +108,17 @@ const Header = () => {
                     >
                       <LayoutDashboard className="w-4 h-4 mr-2" />
                       Painel
+                    </Button>
+                  )}
+                  {isAdmin && location.pathname !== '/admin' && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleAdminClick}
+                      className="hidden sm:flex"
+                    >
+                      <Shield className="w-4 h-4 mr-2" />
+                      Admin
                     </Button>
                   )}
                   <Button 
