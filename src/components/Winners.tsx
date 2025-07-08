@@ -107,15 +107,7 @@ const Winners = () => {
 
       const totalDistributed = totalPrizes?.reduce((sum, raffle) => sum + Number(raffle.prize_value), 0) || 0;
 
-      // 3. Total de participantes únicos
-      const { data: uniqueParticipants } = await supabase
-        .from('raffle_tickets')
-        .select('user_id', { count: 'exact' });
-
-      // Contar participantes únicos
-      const uniqueUserIds = new Set(uniqueParticipants?.map(ticket => ticket.user_id) || []);
-
-      // 4. Total de usuários cadastrados
+      // 3. Total de usuários cadastrados na plataforma
       const { count: totalUsersCount } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true });
@@ -123,7 +115,7 @@ const Winners = () => {
       setStats({
         completedRaffles: completedCount || 0,
         totalDistributed,
-        totalParticipants: uniqueUserIds.size,
+        totalParticipants: totalUsersCount || 0, // Agora mostra total de usuários cadastrados
         totalUsers: totalUsersCount || 0
       });
 
@@ -216,7 +208,7 @@ const Winners = () => {
           
           <Card className="p-4 text-center bg-card/50 backdrop-blur-sm">
             <div className="text-2xl font-bold text-primary mb-1">{stats.totalParticipants}</div>
-            <div className="text-sm text-muted-foreground">Participantes</div>
+            <div className="text-sm text-muted-foreground">Usuários Cadastrados</div>
           </Card>
           
           <Card className="p-4 text-center bg-card/50 backdrop-blur-sm">
