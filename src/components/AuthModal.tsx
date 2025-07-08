@@ -17,6 +17,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [loading, setLoading] = useState(false);
   const { signIn, signUp } = useAuth();
@@ -68,18 +69,29 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
         return;
       }
 
-      if (!isLogin && whatsapp.replace(/\D/g, '').length !== 11) {
-        toast({
-          title: "Erro",
-          description: "Por favor, insira um número de WhatsApp válido",
-          variant: "destructive",
-        });
-        return;
+      if (!isLogin) {
+        if (!fullName.trim()) {
+          toast({
+            title: "Erro",
+            description: "Por favor, insira seu nome completo",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (whatsapp.replace(/\D/g, '').length !== 11) {
+          toast({
+            title: "Erro",
+            description: "Por favor, insira um número de WhatsApp válido",
+            variant: "destructive",
+          });
+          return;
+        }
       }
 
       const { error } = isLogin 
         ? await signIn(email, password)
-        : await signUp(email, password, whatsapp);
+        : await signUp(email, password, fullName, whatsapp);
 
       if (error) {
         let errorMessage = "Ocorreu um erro. Tente novamente.";
@@ -155,6 +167,23 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
               />
             </div>
           </div>
+
+          {!isLogin && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Nome Completo</label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Seu nome completo"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="pl-10"
+                  required
+                />
+              </div>
+            </div>
+          )}
 
           {!isLogin && (
             <div className="space-y-2">
