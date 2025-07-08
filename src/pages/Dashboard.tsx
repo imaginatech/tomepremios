@@ -1,8 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { LogOut } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import UserProfile from '@/components/dashboard/UserProfile';
@@ -16,7 +17,7 @@ interface UserProfile {
 }
 
 const Dashboard = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
 
@@ -47,6 +48,10 @@ const Dashboard = () => {
     }
   };
 
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
   if (loading || profileLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -66,12 +71,24 @@ const Dashboard = () => {
       <Header />
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            Olá, {displayName}!
-          </h1>
-          <p className="text-muted-foreground mb-8">
-            Bem-vindo ao seu painel de controle
-          </p>
+          <div className="flex justify-between items-start mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground mb-2">
+                Olá, {displayName}!
+              </h1>
+              <p className="text-muted-foreground">
+                Bem-vindo ao seu painel de controle
+              </p>
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={handleSignOut}
+              className="flex items-center gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              Sair da conta
+            </Button>
+          </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Coluna Principal */}
