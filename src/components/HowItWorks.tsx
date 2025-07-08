@@ -20,7 +20,7 @@ const HowItWorks = () => {
     {
       icon: CheckCircle,
       title: 'Confirme sua Participação',
-      description: 'Receba a confirmação dos seus números por WhatsApp e email. Seus títulos estão garantidos!',
+      description: 'Receba a confirmação dos seus números por WhatsApp e no aplicativo. Seus títulos estão garantidos!',
       color: 'bg-primary'
     },
     {
@@ -67,7 +67,7 @@ const HowItWorks = () => {
           <Card className="p-6 bg-card/50 backdrop-blur-sm">
             <h3 className="text-lg font-semibold mb-3 text-primary">💰 Quando recebo o prêmio?</h3>
             <p className="text-muted-foreground text-sm">
-              O prêmio é transferido via PIX em até 24 horas após o sorteio. Rápido e seguro!
+              O prêmio é transferido via PIX em até 10 minutos após o sorteio. Rápido e seguro!
             </p>
           </Card>
 
