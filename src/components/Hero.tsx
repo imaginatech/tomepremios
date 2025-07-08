@@ -44,7 +44,16 @@ const Hero = () => {
                 <div className="text-sm opacity-90">Vendidos</div>
               </div>
             </div>
-            <Button size="lg" className="btn-pix text-lg px-8 py-4 hover-lift">
+            <Button 
+              size="lg" 
+              className="btn-pix text-lg px-8 py-4 hover-lift"
+              onClick={() => {
+                const sectionElement = document.getElementById('sorteios');
+                if (sectionElement) {
+                  sectionElement.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+            >
               <DollarSign className="w-5 h-5 mr-2" />
               PARTICIPAR AGORA
             </Button>

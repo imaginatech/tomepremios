@@ -6,12 +6,14 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthModal from './AuthModal';
+import PixPaymentModal from './PixPaymentModal';
 import { useToast } from '@/hooks/use-toast';
 
 const RaffleSelector = () => {
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [soldNumbers] = useState<number[]>([1, 5, 12, 23, 45, 67, 89, 134, 156, 178, 190, 199]);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showPixModal, setShowPixModal] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -47,18 +49,24 @@ const RaffleSelector = () => {
       return;
     }
 
-    // Continuar para o pagamento
-    toast({
-      title: "Redirecionando...",
-      description: "Você será redirecionado para o pagamento PIX em breve",
-    });
+    // Abrir modal do PIX
+    setShowPixModal(true);
   };
 
   const handleAuthSuccess = () => {
     // Usuário fez login/cadastro com sucesso, continuar para pagamento
+    setShowAuthModal(false);
+    setShowPixModal(true);
+  };
+
+  const handlePixSuccess = () => {
+    // Limpar seleção após pagamento bem-sucedido
+    setSelectedNumbers([]);
+    setShowPixModal(false);
+    
     toast({
-      title: "Redirecionando...",
-      description: "Você será redirecionado para o pagamento PIX em breve",
+      title: "Parabéns! 🎉",
+      description: "Você está participando do sorteio! Boa sorte!",
     });
   };
 
@@ -193,6 +201,14 @@ const RaffleSelector = () => {
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         onSuccess={handleAuthSuccess}
+      />
+
+      <PixPaymentModal
+        isOpen={showPixModal}
+        onClose={() => setShowPixModal(false)}
+        onSuccess={handlePixSuccess}
+        selectedNumbers={selectedNumbers}
+        total={total}
       />
     </>
   );
