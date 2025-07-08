@@ -25,13 +25,11 @@ const Header = () => {
           <div className="flex items-center justify-between">
             {/* Logo */}
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 gradient-gold rounded-xl flex items-center justify-center">
-                <Trophy className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold golden-text">PIX Fortuna</h1>
-                <p className="text-xs text-muted-foreground">Mobile</p>
-              </div>
+              <img 
+                src="/lovable-uploads/e1294ca2-05a2-4127-8d2a-152c5031ea6d.png" 
+                alt="PIX da Sorte Logo" 
+                className="h-12 w-auto"
+              />
             </div>
 
             {/* Navigation - Desktop */}
