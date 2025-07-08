@@ -112,7 +112,7 @@ const ParticipatedRaffles = () => {
               const ticketNumbers = raffle.user_tickets.map(t => t.ticket_number.toString().padStart(3, '0'));
               
               return (
-                <div key={raffle.id} className={`border rounded-lg p-4 space-y-3 ${winner ? 'bg-green-50 border-green-200' : isActive ? 'bg-blue-50 border-blue-200' : ''}`}>
+                <div key={raffle.id} className={`border rounded-lg p-4 space-y-3 ${winner ? 'border-green-500' : isActive ? 'border-blue-500' : 'border-border'}`}>
                   <div className="flex items-start justify-between">
                     <div>
                       <h3 className="font-semibold text-lg">{raffle.title}</h3>
