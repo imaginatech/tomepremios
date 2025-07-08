@@ -14,7 +14,110 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          id: string
+          pix_key: string | null
+          updated_at: string
+          whatsapp: string | null
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          id: string
+          pix_key?: string | null
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          pix_key?: string | null
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
+      raffle_tickets: {
+        Row: {
+          created_at: string
+          id: string
+          payment_status: string
+          raffle_id: string
+          ticket_number: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          payment_status?: string
+          raffle_id: string
+          ticket_number: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          payment_status?: string
+          raffle_id?: string
+          ticket_number?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "raffle_tickets_raffle_id_fkey"
+            columns: ["raffle_id"]
+            isOneToOne: false
+            referencedRelation: "raffles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      raffles: {
+        Row: {
+          created_at: string
+          description: string | null
+          draw_date: string
+          id: string
+          prize_value: number
+          status: string
+          ticket_price: number
+          title: string
+          total_tickets: number
+          updated_at: string
+          winning_number: number | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          draw_date: string
+          id?: string
+          prize_value: number
+          status?: string
+          ticket_price?: number
+          title: string
+          total_tickets?: number
+          updated_at?: string
+          winning_number?: number | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          draw_date?: string
+          id?: string
+          prize_value?: number
+          status?: string
+          ticket_price?: number
+          title?: string
+          total_tickets?: number
+          updated_at?: string
+          winning_number?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
