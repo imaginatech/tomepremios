@@ -275,15 +275,6 @@ const UserProfile = () => {
           />
         </div>
 
-        {/* Debug info - remover em produção */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mt-4 p-2 bg-muted rounded text-xs">
-            <strong>Debug Info:</strong>
-            <br />User ID: {user?.id}
-            <br />Profile: {JSON.stringify(profile)}
-            <br />User Metadata: {JSON.stringify(user?.user_metadata)}
-          </div>
-        )}
       </CardContent>
     </Card>
   );
