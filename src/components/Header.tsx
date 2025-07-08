@@ -28,7 +28,7 @@ const Header = () => {
               <img 
                 src="/lovable-uploads/e1294ca2-05a2-4127-8d2a-152c5031ea6d.png" 
                 alt="PIX da Sorte Logo" 
-                className="h-12 w-auto"
+                className="h-12 w-auto brightness-0 invert"
               />
             </div>
 
