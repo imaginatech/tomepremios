@@ -7,20 +7,6 @@ const Footer = () => {
     <footer className="bg-card border-t border-border py-12">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-          
-
-          {/* Links Rápidos */}
-          <div>
-            <h4 className="font-semibold mb-4">Links Rápidos</h4>
-            <ul className="space-y-2 text-sm">
-              <li><a href="#home" className="text-muted-foreground hover:text-primary transition-colors">Início</a></li>
-              <li><a href="#sorteios" className="text-muted-foreground hover:text-primary transition-colors">Sorteios Ativos</a></li>
-              <li><a href="#ganhadores" className="text-muted-foreground hover:text-primary transition-colors">Ganhadores</a></li>
-              <li><a href="#como-funciona" className="text-muted-foreground hover:text-primary transition-colors">Como Funciona</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Termos de Uso</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Privacidade</a></li>
-            </ul>
-          </div>
 
           {/* Contato */}
           <div>
