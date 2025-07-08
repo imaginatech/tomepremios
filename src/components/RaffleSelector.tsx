@@ -238,58 +238,6 @@ const RaffleSelector = () => {
         </div>
       </section>
 
-      {/* Card flutuante para mostrar números selecionados */}
-      {selectedNumbers.length > 0 && (
-        <div className="fixed bottom-6 right-6 z-50">
-          <Card className="p-4 bg-card/95 backdrop-blur-sm border-primary shadow-xl max-w-sm">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-sm">Números Selecionados</h3>
-              <Badge variant="secondary" className="bg-primary/10 text-primary">
-                {selectedNumbers.length}
-              </Badge>
-            </div>
-            
-            <div className="flex flex-wrap gap-1 mb-3">
-              {selectedNumbers.sort((a, b) => a - b).slice(0, 6).map(number => (
-                <span key={number} className="bg-accent text-white px-2 py-1 rounded text-xs font-mono">
-                  {String(number).padStart(3, '0')}
-                </span>
-              ))}
-              {selectedNumbers.length > 6 && (
-                <span className="text-xs text-muted-foreground px-2 py-1">
-                  +{selectedNumbers.length - 6} mais
-                </span>
-              )}
-            </div>
-            
-            <div className="flex items-center justify-between text-sm mb-3">
-              <span>Total:</span>
-              <span className="font-bold text-primary">R$ {total.toFixed(2)}</span>
-            </div>
-            
-            <Button 
-              className="w-full h-8 text-xs" 
-              onClick={() => {
-                const seusNumerosSection = document.getElementById('sorteios');
-                if (seusNumerosSection) {
-                  seusNumerosSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  // Destacar o carrinho por um momento
-                  const carrinho = document.querySelector('.lg\\:col-span-1');
-                  if (carrinho) {
-                    carrinho.classList.add('ring-2', 'ring-primary', 'ring-opacity-50');
-                    setTimeout(() => {
-                      carrinho.classList.remove('ring-2', 'ring-primary', 'ring-opacity-50');
-                    }, 2000);
-                  }
-                }
-              }}
-            >
-              Ver Seus Números
-            </Button>
-          </Card>
-        </div>
-      )}
-
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
