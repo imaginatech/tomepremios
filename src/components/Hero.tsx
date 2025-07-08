@@ -93,6 +93,7 @@ const Hero = () => {
       }
 
       const soldCount = tickets?.length || 0;
+      console.log(`Tickets vendidos: ${soldCount}/${raffle.total_tickets}`);
 
       setActiveRaffleId(raffle.id);
       
