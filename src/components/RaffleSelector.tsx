@@ -16,22 +16,84 @@ const RaffleSelector = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showPixModal, setShowPixModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeRaffleId, setActiveRaffleId] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Carregar números vendidos ao montar o componente
+  // Carregar dados do sorteio ativo e configurar realtime
   useEffect(() => {
-    loadSoldNumbers();
+    loadRaffleAndSoldNumbers();
   }, []);
 
-  const loadSoldNumbers = async () => {
+  // Configurar realtime quando temos um sorteio ativo
+  useEffect(() => {
+    if (!activeRaffleId) return;
+
+    const channel = supabase
+      .channel('raffle-selector-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'raffle_tickets',
+          filter: `raffle_id=eq.${activeRaffleId}`
+        },
+        (payload) => {
+          console.log('Atualização de tickets detectada no RaffleSelector:', payload);
+          loadSoldNumbers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeRaffleId]);
+
+  const loadRaffleAndSoldNumbers = async () => {
     try {
       setIsLoading(true);
       
-      // Buscar números já vendidos do sorteio ativo
+      // Buscar sorteio ativo
+      const { data: raffle, error: raffleError } = await supabase
+        .from('raffles')
+        .select('id')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (raffleError) {
+        console.error('Erro ao buscar sorteio ativo:', raffleError);
+        setIsLoading(false);
+        return;
+      }
+
+      if (!raffle) {
+        console.log('Nenhum sorteio ativo encontrado');
+        setIsLoading(false);
+        return;
+      }
+
+      setActiveRaffleId(raffle.id);
+      await loadSoldNumbers(raffle.id);
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+      setIsLoading(false);
+    }
+  };
+
+  const loadSoldNumbers = async (raffleId?: string) => {
+    try {
+      const targetRaffleId = raffleId || activeRaffleId;
+      if (!targetRaffleId) return;
+
+      // Buscar números já vendidos do sorteio ativo específico
       const { data, error } = await supabase
         .from('raffle_tickets')
         .select('ticket_number')
+        .eq('raffle_id', targetRaffleId)
         .eq('payment_status', 'paid');
 
       if (error) {
@@ -44,7 +106,7 @@ const RaffleSelector = () => {
     } catch (error) {
       console.error('Erro ao carregar números vendidos:', error);
     } finally {
-      setIsLoading(false);
+      if (!raffleId) setIsLoading(false);
     }
   };
 
