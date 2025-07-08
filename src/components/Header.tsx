@@ -29,6 +29,10 @@ const Header = () => {
     navigate('/');
   };
 
+  const handleAvatarClick = () => {
+    navigate('/dashboard');
+  };
+
   return (
     <>
       <header className="bg-card border-b border-border sticky top-0 z-50 backdrop-blur-lg bg-background/95">
@@ -55,7 +59,7 @@ const Header = () => {
             <div className="flex items-center space-x-3">
               {user ? (
                 <div className="flex items-center space-x-2">
-                  <Avatar className="w-8 h-8">
+                  <Avatar className="w-8 h-8 cursor-pointer hover:opacity-80 transition-opacity" onClick={handleAvatarClick}>
                     <AvatarImage src="" alt={user.email || ''} />
                     <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                       {getInitials(user.email || 'US')}
