@@ -8,26 +8,6 @@ const Footer = () => {
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
 
-          {/* Contato */}
-          <div>
-            <h4 className="font-semibold mb-4">Contato</h4>
-            <ul className="space-y-3 text-sm">
-              <li className="flex items-center">
-                <MessageCircle className="w-4 h-4 mr-2 text-primary" />
-                <span className="text-muted-foreground">(11) 99999-9999</span>
-              </li>
-              <li className="flex items-center">
-                <Mail className="w-4 h-4 mr-2 text-primary" />
-                <span className="text-muted-foreground">contato@pixfortuna.com</span>
-              </li>
-              <li className="flex items-center">
-                <Phone className="w-4 h-4 mr-2 text-primary" />
-                <span className="text-muted-foreground">Suporte 24h</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-
         {/* Certificações e Garantias */}
         <div className="border-t border-border pt-8 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
