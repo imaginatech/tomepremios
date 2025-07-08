@@ -135,9 +135,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_active_raffle: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      reserve_numbers: {
+        Args: { p_user_id: string; p_numbers: number[] }
+        Returns: boolean
       }
     }
     Enums: {

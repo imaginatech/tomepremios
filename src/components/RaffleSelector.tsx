@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShoppingCart, Trash2, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -8,14 +8,45 @@ import { useAuth } from '@/contexts/AuthContext';
 import AuthModal from './AuthModal';
 import PixPaymentModal from './PixPaymentModal';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const RaffleSelector = () => {
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
-  const [soldNumbers] = useState<number[]>([1, 5, 12, 23, 45, 67, 89, 134, 156, 178, 190, 199]);
+  const [soldNumbers, setSoldNumbers] = useState<number[]>([]);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showPixModal, setShowPixModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
+
+  // Carregar números vendidos ao montar o componente
+  useEffect(() => {
+    loadSoldNumbers();
+  }, []);
+
+  const loadSoldNumbers = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Buscar números já vendidos do sorteio ativo
+      const { data, error } = await supabase
+        .from('raffle_tickets')
+        .select('ticket_number')
+        .eq('payment_status', 'paid');
+
+      if (error) {
+        console.error('Erro ao carregar números vendidos:', error);
+        return;
+      }
+
+      const sold = data?.map(ticket => ticket.ticket_number) || [];
+      setSoldNumbers(sold);
+    } catch (error) {
+      console.error('Erro ao carregar números vendidos:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Gerar números de 1 a 200
   const allNumbers = Array.from({ length: 200 }, (_, i) => i + 1);
@@ -60,6 +91,9 @@ const RaffleSelector = () => {
   };
 
   const handlePixSuccess = () => {
+    // Recarregar números vendidos após pagamento bem-sucedido
+    loadSoldNumbers();
+    
     // Limpar seleção após pagamento bem-sucedido
     setSelectedNumbers([]);
     setShowPixModal(false);
@@ -115,25 +149,32 @@ const RaffleSelector = () => {
                   )}
                 </div>
 
-                <div className="titles-grid">
-                  {allNumbers.map(number => {
-                    const isSelected = selectedNumbers.includes(number);
-                    const isSold = soldNumbers.includes(number);
-                    
-                    return (
-                      <button
-                        key={number}
-                        onClick={() => toggleNumber(number)}
-                        className={`title-number ${
-                          isSold ? 'sold' : isSelected ? 'selected' : 'available'
-                        }`}
-                        disabled={isSold}
-                      >
-                        {String(number).padStart(3, '0')}
-                      </button>
-                    );
-                  })}
-                </div>
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full"></div>
+                    <span className="ml-3 text-muted-foreground">Carregando números...</span>
+                  </div>
+                ) : (
+                  <div className="titles-grid">
+                    {allNumbers.map(number => {
+                      const isSelected = selectedNumbers.includes(number);
+                      const isSold = soldNumbers.includes(number);
+                      
+                      return (
+                        <button
+                          key={number}
+                          onClick={() => toggleNumber(number)}
+                          className={`title-number ${
+                            isSold ? 'sold' : isSelected ? 'selected' : 'available'
+                          }`}
+                          disabled={isSold}
+                        >
+                          {String(number).padStart(3, '0')}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </Card>
             </div>
 

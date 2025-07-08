@@ -4,6 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PixPaymentModalProps {
   isOpen: boolean;
@@ -16,7 +18,9 @@ interface PixPaymentModalProps {
 const PixPaymentModal = ({ isOpen, onClose, onSuccess, selectedNumbers, total }: PixPaymentModalProps) => {
   const [countdown, setCountdown] = useState(600); // 10 minutos
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'processing' | 'confirmed'>('pending');
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   // PIX code de demonstração
   const pixCode = "00020126580014br.gov.bcb.pix0136123e4567-e12b-12d1-a456-426655440000520400005303986540525.005802BR5925PIX DA SORTE DEMONSTRACAO6008SAO PAULO62070503***6304";
@@ -43,21 +47,40 @@ const PixPaymentModal = ({ isOpen, onClose, onSuccess, selectedNumbers, total }:
     return () => clearInterval(timer);
   }, [isOpen, onClose, toast]);
 
-  // Simular confirmação de pagamento após 30 segundos (para demonstração)
-  useEffect(() => {
-    if (!isOpen || paymentStatus !== 'pending') return;
-
-    const simulatePayment = setTimeout(() => {
-      setPaymentStatus('processing');
+  // Função para processar pagamento demo
+  const handleDemoPayment = async () => {
+    if (!user) {
       toast({
-        title: "Pagamento detectado!",
-        description: "Processando sua transação...",
+        title: "Erro",
+        description: "Usuário não autenticado",
+        variant: "destructive",
       });
+      return;
+    }
 
-      setTimeout(() => {
+    setIsProcessing(true);
+    setPaymentStatus('processing');
+    
+    toast({
+      title: "Processando pagamento...",
+      description: "Aguarde 5 segundos para confirmação",
+    });
+
+    // Aguardar 5 segundos e processar
+    setTimeout(async () => {
+      try {
+        const { data, error } = await supabase.rpc('reserve_numbers', {
+          p_user_id: user.id,
+          p_numbers: selectedNumbers
+        });
+
+        if (error) {
+          throw error;
+        }
+
         setPaymentStatus('confirmed');
         toast({
-          title: "Pagamento confirmado!",
+          title: "Pagamento confirmado! 🎉",
           description: "Seus números foram reservados com sucesso!",
         });
 
@@ -65,11 +88,19 @@ const PixPaymentModal = ({ isOpen, onClose, onSuccess, selectedNumbers, total }:
           onSuccess();
           onClose();
         }, 2000);
-      }, 3000);
-    }, 30000); // 30 segundos para demonstração
-
-    return () => clearTimeout(simulatePayment);
-  }, [isOpen, paymentStatus, onSuccess, onClose, toast]);
+      } catch (error: any) {
+        console.error('Erro ao reservar números:', error);
+        setPaymentStatus('pending');
+        toast({
+          title: "Erro no pagamento",
+          description: error.message || "Tente novamente",
+          variant: "destructive",
+        });
+      } finally {
+        setIsProcessing(false);
+      }
+    }, 5000);
+  };
 
   const copyPixCode = () => {
     navigator.clipboard.writeText(pixCode);
@@ -199,11 +230,12 @@ const PixPaymentModal = ({ isOpen, onClose, onSuccess, selectedNumbers, total }:
           {/* Botão para simular pagamento (apenas para demonstração) */}
           {paymentStatus === 'pending' && (
             <Button 
-              onClick={() => setPaymentStatus('processing')}
-              className="w-full bg-green-600 hover:bg-green-700"
+              onClick={handleDemoPayment}
+              disabled={isProcessing}
+              className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50"
             >
               <DollarSign className="w-4 h-4 mr-2" />
-              Simular Pagamento (Demo)
+              {isProcessing ? 'Processando...' : 'Simular Pagamento (Demo)'}
             </Button>
           )}
         </div>
