@@ -1,10 +1,78 @@
 
-import React from 'react';
-import { Trophy, Timer, Users, DollarSign } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Trophy, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
 
 const Hero = () => {
+  const [raffleData, setRaffleData] = useState({
+    title: 'EDIÇÃO #001',
+    prizeValue: 500.00,
+    ticketPrice: 5.00,
+    totalTickets: 200,
+    soldTickets: 0,
+    isLoading: true
+  });
+
+  useEffect(() => {
+    loadRaffleData();
+  }, []);
+
+  const loadRaffleData = async () => {
+    try {
+      // Buscar sorteio ativo
+      const { data: raffle, error: raffleError } = await supabase
+        .from('raffles')
+        .select('*')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (raffleError) {
+        console.error('Erro ao buscar sorteio:', raffleError);
+        return;
+      }
+
+      if (!raffle) {
+        console.log('Nenhum sorteio ativo encontrado');
+        return;
+      }
+
+      // Buscar números vendidos
+      const { data: tickets, error: ticketsError } = await supabase
+        .from('raffle_tickets')
+        .select('ticket_number')
+        .eq('raffle_id', raffle.id)
+        .eq('payment_status', 'paid');
+
+      if (ticketsError) {
+        console.error('Erro ao buscar tickets:', ticketsError);
+        return;
+      }
+
+      const soldCount = tickets?.length || 0;
+
+      setRaffleData({
+        title: raffle.title,
+        prizeValue: raffle.prize_value,
+        ticketPrice: raffle.ticket_price,
+        totalTickets: raffle.total_tickets,
+        soldTickets: soldCount,
+        isLoading: false
+      });
+    } catch (error) {
+      console.error('Erro ao carregar dados do sorteio:', error);
+      setRaffleData(prev => ({ ...prev, isLoading: false }));
+    }
+  };
+
+  const availableTickets = raffleData.totalTickets - raffleData.soldTickets;
+  const soldPercentage = raffleData.totalTickets > 0 
+    ? Math.round((raffleData.soldTickets / raffleData.totalTickets) * 100)
+    : 0;
+
   return (
     <section className="relative py-12 md:py-20 overflow-hidden">
       {/* Background Effects */}
@@ -20,30 +88,42 @@ const Hero = () => {
               <Trophy className="w-5 h-5 mr-2" />
               <span className="font-semibold">SORTEIO ATIVO</span>
             </div>
-            <h1 className="text-3xl md:text-5xl font-bold mb-4">
-              EDIÇÃO #001
-            </h1>
-            <p className="text-xl md:text-2xl mb-6 font-semibold">
-              CONCORRA A R$ 500,00
-            </p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="text-center">
-                <div className="text-2xl md:text-3xl font-bold">200</div>
-                <div className="text-sm opacity-90">Títulos Total</div>
+            
+            {raffleData.isLoading ? (
+              <div className="animate-pulse">
+                <div className="h-12 bg-white/20 rounded mb-4"></div>
+                <div className="h-8 bg-white/20 rounded mb-6"></div>
+                <div className="h-24 bg-white/20 rounded mb-6"></div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl md:text-3xl font-bold">R$ 5</div>
-                <div className="text-sm opacity-90">Por Título</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl md:text-3xl font-bold">156</div>
-                <div className="text-sm opacity-90">Disponíveis</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl md:text-3xl font-bold">78%</div>
-                <div className="text-sm opacity-90">Vendidos</div>
-              </div>
-            </div>
+            ) : (
+              <>
+                <h1 className="text-3xl md:text-5xl font-bold mb-4">
+                  {raffleData.title}
+                </h1>
+                <p className="text-xl md:text-2xl mb-6 font-semibold">
+                  CONCORRA A R$ {raffleData.prizeValue.toFixed(2).replace('.', ',')}
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  <div className="text-center">
+                    <div className="text-2xl md:text-3xl font-bold">{raffleData.totalTickets}</div>
+                    <div className="text-sm opacity-90">Títulos Total</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl md:text-3xl font-bold">R$ {raffleData.ticketPrice.toFixed(0)}</div>
+                    <div className="text-sm opacity-90">Por Título</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl md:text-3xl font-bold">{availableTickets}</div>
+                    <div className="text-sm opacity-90">Disponíveis</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl md:text-3xl font-bold">{soldPercentage}%</div>
+                    <div className="text-sm opacity-90">Vendidos</div>
+                  </div>
+                </div>
+              </>
+            )}
+            
             <Button 
               size="lg" 
               className="btn-pix text-lg px-8 py-4 hover-lift"
@@ -59,33 +139,6 @@ const Hero = () => {
             </Button>
           </div>
         </Card>
-
-        {/* Estatísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <Card className="p-6 text-center hover-lift bg-card/50 backdrop-blur-sm">
-            <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center mx-auto mb-4">
-              <Users className="w-6 h-6 text-white" />
-            </div>
-            <h3 className="text-2xl font-bold mb-2">1,247</h3>
-            <p className="text-muted-foreground">Participantes Ativos</p>
-          </Card>
-
-          <Card className="p-6 text-center hover-lift bg-card/50 backdrop-blur-sm">
-            <div className="w-12 h-12 bg-accent rounded-xl flex items-center justify-center mx-auto mb-4">
-              <Trophy className="w-6 h-6 text-white" />
-            </div>
-            <h3 className="text-2xl font-bold mb-2">R$ 12,500</h3>
-            <p className="text-muted-foreground">Total em Prêmios</p>
-          </Card>
-
-          <Card className="p-6 text-center hover-lift bg-card/50 backdrop-blur-sm">
-            <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center mx-auto mb-4">
-              <Timer className="w-6 h-6 text-white" />
-            </div>
-            <h3 className="text-2xl font-bold mb-2">2h 15m</h3>
-            <p className="text-muted-foreground">Para o Sorteio</p>
-          </Card>
-        </div>
 
         {/* Call to Action */}
         <div className="text-center">
