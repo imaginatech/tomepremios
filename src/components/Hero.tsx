@@ -15,9 +15,41 @@ const Hero = () => {
     isLoading: true
   });
 
+  const [activeRaffleId, setActiveRaffleId] = useState<string | null>(null);
+
   useEffect(() => {
     loadRaffleData();
   }, []);
+
+  useEffect(() => {
+    if (!activeRaffleId) return;
+
+    console.log('Configurando realtime para raffle:', activeRaffleId);
+
+    // Configurar realtime para atualizações de tickets
+    const channel = supabase
+      .channel('raffle-tickets-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'raffle_tickets',
+          filter: `raffle_id=eq.${activeRaffleId}`
+        },
+        (payload) => {
+          console.log('Atualização de ticket detectada:', payload);
+          // Recarregar dados quando houver mudanças
+          loadRaffleData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('Removendo subscription realtime');
+      supabase.removeChannel(channel);
+    };
+  }, [activeRaffleId]);
 
   const loadRaffleData = async () => {
     try {
@@ -62,6 +94,8 @@ const Hero = () => {
 
       const soldCount = tickets?.length || 0;
 
+      setActiveRaffleId(raffle.id);
+      
       setRaffleData({
         title: raffle.title,
         prizeValue: raffle.prize_value,
