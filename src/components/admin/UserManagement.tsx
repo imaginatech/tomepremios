@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -93,7 +92,7 @@ const UserManagement = () => {
       // Buscar bilhetes do usuário
       const { data: tickets } = await supabase
         .from('raffle_tickets')
-        .select('raffle_id, payment_status')
+        .select('raffle_id, payment_status, ticket_number')
         .eq('user_id', userId);
 
       const totalTickets = tickets?.length || 0;
@@ -297,7 +296,7 @@ const UserManagement = () => {
         </div>
       )}
 
-      {/* Modal de detalhes do usuário poderia ser implementado aqui */}
+      {/* Modal de detalhes do usuário */}
       {showUserDetails && selectedUser && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-2xl max-h-[80vh] overflow-y-auto">
