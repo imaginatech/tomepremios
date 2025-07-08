@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Clock, Fire, Zap, Users } from 'lucide-react';
+import { AlertTriangle, Clock, Flame, Zap, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -85,7 +85,7 @@ const UrgencyAlerts = () => {
 
   const getUrgencyIcon = (level: string) => {
     switch (level) {
-      case 'critical': return <Fire className="w-4 h-4" />;
+      case 'critical': return <Flame className="w-4 h-4" />;
       case 'high': return <AlertTriangle className="w-4 h-4" />;
       case 'medium': return <Zap className="w-4 h-4" />;
       default: return <Clock className="w-4 h-4" />;
