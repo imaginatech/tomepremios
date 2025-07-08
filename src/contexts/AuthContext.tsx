@@ -51,6 +51,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (email: string, password: string, fullName?: string, whatsapp?: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
+    console.log('Signing up with data:', { email, fullName, whatsapp });
+    
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -62,6 +64,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
     });
+    
+    console.log('SignUp result:', { error });
     return { error };
   };
 

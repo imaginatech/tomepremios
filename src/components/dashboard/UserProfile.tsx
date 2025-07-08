@@ -36,14 +36,24 @@ const UserProfile = () => {
 
   const fetchProfile = async () => {
     try {
+      console.log('Fetching profile for user:', user?.id);
+      
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, full_name, whatsapp, pix_key')
         .eq('id', user?.id)
         .single();
 
+      console.log('Profile data:', data);
+      console.log('Profile error:', error);
+
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching profile:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao carregar perfil. Tente novamente.",
+          variant: "destructive"
+        });
         return;
       }
 
@@ -55,34 +65,74 @@ const UserProfile = () => {
           pix_key: data.pix_key || ''
         });
       } else {
-        // Criar perfil se não existir
+        // Se não existe perfil, criar um novo
+        console.log('Creating new profile for user:', user?.id);
         const { data: newProfile, error: createError } = await supabase
           .from('profiles')
-          .insert([{ id: user?.id }])
-          .select()
+          .insert([{ 
+            id: user?.id,
+            full_name: user?.user_metadata?.full_name || null,
+            whatsapp: user?.user_metadata?.whatsapp || null
+          }])
+          .select('id, full_name, whatsapp, pix_key')
           .single();
 
         if (createError) {
           console.error('Error creating profile:', createError);
         } else {
+          console.log('New profile created:', newProfile);
           setProfile(newProfile);
+          setFormData({
+            full_name: newProfile.full_name || '',
+            whatsapp: newProfile.whatsapp || '',
+            pix_key: newProfile.pix_key || ''
+          });
         }
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error in fetchProfile:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar perfil. Tente novamente.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
+  };
+
+  const formatWhatsApp = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    
+    if (numbers.length <= 2) {
+      return `(${numbers}`;
+    } else if (numbers.length <= 3) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+    } else if (numbers.length <= 7) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 3)} ${numbers.slice(3)}`;
+    } else {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 3)} ${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`;
+    }
+  };
+
+  const handleWhatsAppChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatWhatsApp(e.target.value);
+    setFormData(prev => ({ ...prev, whatsapp: formatted }));
   };
 
   const handleSave = async () => {
     try {
       const { error } = await supabase
         .from('profiles')
-        .update(formData)
+        .update({
+          full_name: formData.full_name,
+          whatsapp: formData.whatsapp,
+          pix_key: formData.pix_key
+        })
         .eq('id', user?.id);
 
       if (error) {
+        console.error('Error updating profile:', error);
         toast({
           title: "Erro",
           description: "Erro ao salvar perfil. Tente novamente.",
@@ -204,9 +254,10 @@ const UserProfile = () => {
           <Input
             id="whatsapp"
             value={formData.whatsapp}
-            onChange={(e) => setFormData(prev => ({ ...prev, whatsapp: e.target.value }))}
+            onChange={handleWhatsAppChange}
             disabled={!isEditing}
             placeholder="(11) 99999-9999"
+            maxLength={16}
           />
         </div>
 
@@ -223,6 +274,16 @@ const UserProfile = () => {
             placeholder="Sua chave PIX para receber prêmios"
           />
         </div>
+
+        {/* Debug info - remover em produção */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-4 p-2 bg-muted rounded text-xs">
+            <strong>Debug Info:</strong>
+            <br />User ID: {user?.id}
+            <br />Profile: {JSON.stringify(profile)}
+            <br />User Metadata: {JSON.stringify(user?.user_metadata)}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
