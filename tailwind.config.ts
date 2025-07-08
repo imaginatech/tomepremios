@@ -107,7 +107,7 @@ export default {
 				'pulse-glow': 'pulse-glow 2s ease-in-out infinite'
 			},
 			fontFamily: {
-				sans: ['Inter', 'system-ui', 'sans-serif'],
+				sans: ['Poppins', 'system-ui', 'sans-serif'],
 			}
 		}
 	},

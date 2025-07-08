@@ -1,9 +1,12 @@
 
 import React from 'react';
-import { Trophy, Menu, User } from 'lucide-react';
+import { Trophy, Menu, User, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Header = () => {
+  const { user, signOut } = useAuth();
+
   return (
     <header className="bg-card border-b border-border sticky top-0 z-50 backdrop-blur-lg bg-background/95">
       <div className="container mx-auto px-4 py-3">
@@ -29,10 +32,27 @@ const Header = () => {
 
           {/* Actions */}
           <div className="flex items-center space-x-3">
-            <Button variant="outline" size="sm" className="hidden sm:flex">
-              <User className="w-4 h-4 mr-2" />
-              Entrar
-            </Button>
+            {user ? (
+              <div className="flex items-center space-x-2">
+                <span className="hidden sm:block text-sm text-muted-foreground">
+                  {user.email}
+                </span>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={signOut}
+                  className="hidden sm:flex"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sair
+                </Button>
+              </div>
+            ) : (
+              <Button variant="outline" size="sm" className="hidden sm:flex">
+                <User className="w-4 h-4 mr-2" />
+                Entrar
+              </Button>
+            )}
             <Button size="sm" className="md:hidden">
               <Menu className="w-4 h-4" />
             </Button>
