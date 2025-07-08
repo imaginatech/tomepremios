@@ -21,6 +21,8 @@ const Hero = () => {
 
   const loadRaffleData = async () => {
     try {
+      console.log('Iniciando carregamento de dados do sorteio...');
+      
       // Buscar sorteio ativo
       const { data: raffle, error: raffleError } = await supabase
         .from('raffles')
@@ -30,15 +32,21 @@ const Hero = () => {
         .limit(1)
         .maybeSingle();
 
+      console.log('Resultado da consulta:', { raffle, raffleError });
+
       if (raffleError) {
         console.error('Erro ao buscar sorteio:', raffleError);
+        setRaffleData(prev => ({ ...prev, isLoading: false }));
         return;
       }
 
       if (!raffle) {
         console.log('Nenhum sorteio ativo encontrado');
+        setRaffleData(prev => ({ ...prev, isLoading: false }));
         return;
       }
+
+      console.log('Sorteio encontrado:', raffle);
 
       // Buscar números vendidos
       const { data: tickets, error: ticketsError } = await supabase
