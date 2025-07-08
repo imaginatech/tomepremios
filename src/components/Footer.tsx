@@ -5,7 +5,9 @@ import { Trophy, Instagram, Facebook, MessageCircle, Mail, Phone } from 'lucide-
 const Footer = () => {
   return (
     <footer className="bg-card border-t border-border py-12">
-      
+      <div className="container mx-auto px-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+          
 
         {/* Certificações e Garantias */}
         <div className="border-t border-border pt-8 mb-8">
