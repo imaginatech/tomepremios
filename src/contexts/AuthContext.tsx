@@ -70,7 +70,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      console.log('Iniciando logout...');
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Erro ao fazer logout:', error);
+        throw error;
+      }
+      console.log('Logout realizado com sucesso');
+      
+      // Força o redirecionamento para a página inicial
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Erro no logout:', error);
+    }
   };
 
   const value = {
