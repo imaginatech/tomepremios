@@ -44,7 +44,7 @@ const Footer = () => {
         {/* Copyright */}
         <div className="border-t border-border pt-6 text-center">
           <p className="text-sm text-muted-foreground">
-            © 2024 PIX Fortuna Mobile. Todos os direitos reservados.
+            © 202 PIX da Sorte. Todos os direitos reservados.
           </p>
           <p className="text-xs text-muted-foreground mt-2">
             Plataforma desenvolvida com tecnologia de ponta para sua segurança e conveniência.
