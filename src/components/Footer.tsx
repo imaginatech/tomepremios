@@ -1,10 +1,7 @@
-
 import React from 'react';
 import { Trophy, Instagram, Facebook, MessageCircle, Mail, Phone } from 'lucide-react';
-
 const Footer = () => {
-  return (
-    <footer className="bg-card border-t border-border py-12">
+  return <footer className="">
       <div className="container mx-auto px-4">
 
         {/* Certificações e Garantias */}
@@ -52,8 +49,6 @@ const Footer = () => {
           </p>
         </div>
       </div>
-    </footer>
-  );
+    </footer>;
 };
-
 export default Footer;
