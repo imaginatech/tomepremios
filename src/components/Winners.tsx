@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Trophy, Calendar, DollarSign, User } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -54,32 +53,39 @@ const Winners = () => {
       const winnersData: Winner[] = [];
       if (completedRaffles) {
         for (const raffle of completedRaffles) {
+          // First get the winning ticket
           const { data: winningTicket, error: ticketError } = await supabase
             .from('raffle_tickets')
-            .select(`
-              ticket_number,
-              profiles!inner(full_name)
-            `)
+            .select('ticket_number, user_id')
             .eq('raffle_id', raffle.id)
             .eq('ticket_number', raffle.winning_number)
             .single();
 
           if (!ticketError && winningTicket) {
-            const winnerName = winningTicket.profiles?.full_name || 'Usuário';
-            // Mascarar o nome (mostrar apenas primeira letra e último sobrenome)
-            const nameParts = winnerName.split(' ');
-            const maskedName = nameParts.length > 1 
-              ? `${nameParts[0].charAt(0)}. ${nameParts[nameParts.length - 1].charAt(0)}.`
-              : `${winnerName.charAt(0)}.`;
+            // Then get the user profile
+            const { data: userProfile, error: profileError } = await supabase
+              .from('profiles')
+              .select('full_name')
+              .eq('id', winningTicket.user_id)
+              .single();
 
-            winnersData.push({
-              id: Math.random(),
-              name: maskedName,
-              number: String(raffle.winning_number).padStart(3, '0'),
-              prize: `R$ ${raffle.prize_value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-              date: raffle.draw_date,
-              edition: `#${String(completedRaffles.indexOf(raffle) + 1).padStart(3, '0')}`
-            });
+            if (!profileError && userProfile) {
+              const winnerName = userProfile.full_name || 'Usuário';
+              // Mascarar o nome (mostrar apenas primeira letra e último sobrenome)
+              const nameParts = winnerName.split(' ');
+              const maskedName = nameParts.length > 1 
+                ? `${nameParts[0].charAt(0)}. ${nameParts[nameParts.length - 1].charAt(0)}.`
+                : `${winnerName.charAt(0)}.`;
+
+              winnersData.push({
+                id: Math.random(),
+                name: maskedName,
+                number: String(raffle.winning_number).padStart(3, '0'),
+                prize: `R$ ${raffle.prize_value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+                date: raffle.draw_date,
+                edition: `#${String(completedRaffles.indexOf(raffle) + 1).padStart(3, '0')}`
+              });
+            }
           }
         }
       }
