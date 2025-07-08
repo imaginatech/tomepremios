@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { QrCode, Copy, CheckCircle, Clock, DollarSign } from 'lucide-react';
+import { QrCode, Copy, CheckCircle, Clock, DollarSign, Gift } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import confetti from 'canvas-confetti';
 
 interface PixPaymentModalProps {
   isOpen: boolean;
@@ -47,6 +48,38 @@ const PixPaymentModal = ({ isOpen, onClose, onSuccess, selectedNumbers, total }:
     return () => clearInterval(timer);
   }, [isOpen, onClose, toast]);
 
+  // Função para trigger do confete
+  const triggerConfetti = () => {
+    const duration = 3000;
+    const animationEnd = Date.now() + duration;
+    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+    function randomInRange(min: number, max: number) {
+      return Math.random() * (max - min) + min;
+    }
+
+    const interval: any = setInterval(function() {
+      const timeLeft = animationEnd - Date.now();
+
+      if (timeLeft <= 0) {
+        return clearInterval(interval);
+      }
+
+      const particleCount = 50 * (timeLeft / duration);
+      
+      confetti({
+        ...defaults,
+        particleCount,
+        origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
+      });
+      confetti({
+        ...defaults,
+        particleCount,
+        origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
+      });
+    }, 250);
+  };
+
   // Função para processar pagamento demo
   const handleDemoPayment = async () => {
     if (!user) {
@@ -79,6 +112,10 @@ const PixPaymentModal = ({ isOpen, onClose, onSuccess, selectedNumbers, total }:
         }
 
         setPaymentStatus('confirmed');
+        
+        // Trigger confetti
+        triggerConfetti();
+        
         toast({
           title: "Pagamento confirmado! 🎉",
           description: "Seus números foram reservados com sucesso!",
@@ -87,7 +124,7 @@ const PixPaymentModal = ({ isOpen, onClose, onSuccess, selectedNumbers, total }:
         setTimeout(() => {
           onSuccess();
           onClose();
-        }, 2000);
+        }, 4000); // Aumentado para 4 segundos para permitir o confete
       } catch (error: any) {
         console.error('Erro ao reservar números:', error);
         setPaymentStatus('pending');
@@ -119,18 +156,36 @@ const PixPaymentModal = ({ isOpen, onClose, onSuccess, selectedNumbers, total }:
   if (paymentStatus === 'confirmed') {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-md">
-          <div className="text-center py-6">
-            <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-green-600 mb-2">Pagamento Confirmado!</h2>
-            <p className="text-muted-foreground mb-4">
-              Seus números foram reservados com sucesso!
-            </p>
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <p className="text-sm text-green-700">
+        <DialogContent className="max-w-md mx-4 sm:mx-auto">
+          <div className="text-center py-6 px-2">
+            <div className="relative mb-6">
+              <CheckCircle className="w-20 h-20 text-green-500 mx-auto animate-scale-in" />
+              <Gift className="w-8 h-8 text-yellow-500 absolute -top-2 -right-2 animate-bounce" />
+            </div>
+            
+            <h2 className="text-2xl md:text-3xl font-bold text-green-600 mb-3">
+              🎉 Pagamento Confirmado! 🎉
+            </h2>
+            
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 mb-4">
+              <p className="text-green-800 font-semibold mb-2">
+                Obrigado pela sua participação!
+              </p>
+              <p className="text-sm text-green-700 mb-3">
                 Números reservados: {selectedNumbers.sort((a, b) => a - b).map(n => n.toString().padStart(3, '0')).join(', ')}
               </p>
             </div>
+
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-4">
+              <h3 className="text-lg font-bold text-blue-800 mb-2">🍀 Boa Sorte! 🍀</h3>
+              <p className="text-sm text-blue-700">
+                Seus números estão participando do sorteio. Que a sorte esteja com você!
+              </p>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Você receberá uma notificação com o resultado do sorteio
+            </p>
           </div>
         </DialogContent>
       </Dialog>
@@ -139,21 +194,21 @@ const PixPaymentModal = ({ isOpen, onClose, onSuccess, selectedNumbers, total }:
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md mx-4 sm:mx-auto max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-center">
+          <DialogTitle className="text-center text-lg sm:text-xl">
             {paymentStatus === 'processing' ? 'Processando Pagamento' : 'Pagamento via PIX'}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
           {/* Timer */}
           <div className="text-center">
             <div className="inline-flex items-center bg-orange-100 text-orange-800 px-3 py-2 rounded-lg">
               <Clock className="w-4 h-4 mr-2" />
-              <span className="font-mono text-lg">{formatTime(countdown)}</span>
+              <span className="font-mono text-base sm:text-lg">{formatTime(countdown)}</span>
             </div>
-            <p className="text-sm text-muted-foreground mt-2">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-2">
               Tempo restante para pagamento
             </p>
           </div>
@@ -188,10 +243,10 @@ const PixPaymentModal = ({ isOpen, onClose, onSuccess, selectedNumbers, total }:
             <>
               {/* QR Code */}
               <div className="text-center">
-                <div className="bg-white p-4 rounded-lg border-2 border-dashed border-muted inline-block">
-                  <QrCode className="w-32 h-32 mx-auto text-foreground" />
+                <div className="bg-white p-3 sm:p-4 rounded-lg border-2 border-dashed border-muted inline-block">
+                  <QrCode className="w-28 h-28 sm:w-32 sm:h-32 mx-auto text-foreground" />
                 </div>
-                <p className="text-sm text-muted-foreground mt-2">
+                <p className="text-xs sm:text-sm text-muted-foreground mt-2 px-2">
                   Escaneie o QR Code com seu app de pagamentos
                 </p>
               </div>
@@ -199,15 +254,15 @@ const PixPaymentModal = ({ isOpen, onClose, onSuccess, selectedNumbers, total }:
               {/* PIX Code */}
               <div className="space-y-3">
                 <div className="text-center">
-                  <span className="text-sm text-muted-foreground">ou copie o código PIX:</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground">ou copie o código PIX:</span>
                 </div>
-                <div className="bg-muted p-3 rounded-lg">
-                  <p className="text-xs font-mono break-all text-center">{pixCode}</p>
+                <div className="bg-muted p-2 sm:p-3 rounded-lg">
+                  <p className="text-xs font-mono break-all text-center leading-relaxed">{pixCode}</p>
                 </div>
                 <Button 
                   onClick={copyPixCode}
                   variant="outline" 
-                  className="w-full"
+                  className="w-full h-12"
                 >
                   <Copy className="w-4 h-4 mr-2" />
                   Copiar código PIX
@@ -215,9 +270,9 @@ const PixPaymentModal = ({ isOpen, onClose, onSuccess, selectedNumbers, total }:
               </div>
 
               {/* Instruções */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-semibold text-blue-800 mb-2">Como pagar:</h4>
-                <ol className="text-sm text-blue-700 space-y-1">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+                <h4 className="font-semibold text-blue-800 mb-2 text-sm sm:text-base">Como pagar:</h4>
+                <ol className="text-xs sm:text-sm text-blue-700 space-y-1">
                   <li>1. Abra seu app de pagamentos</li>
                   <li>2. Escolha a opção PIX</li>
                   <li>3. Escaneie o QR Code ou cole o código</li>
