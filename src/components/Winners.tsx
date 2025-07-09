@@ -61,14 +61,17 @@ const Winners = () => {
 
   const fetchWinnersAndStats = async () => {
     try {
+      console.log('Buscando ganhadores...');
       // Buscar sorteios concluídos com ganhadores
       const { data: completedRaffles, error: rafflesError } = await supabase
         .from('raffles')
         .select('*')
         .eq('status', 'completed')
         .not('winning_number', 'is', null)
-        .order('draw_date', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(3);
+
+      console.log('Sorteios concluídos encontrados:', completedRaffles);
 
       if (rafflesError) {
         console.error('Error fetching completed raffles:', rafflesError);
