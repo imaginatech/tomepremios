@@ -53,6 +53,7 @@ const RaffleSelector = () => {
 
   const loadRaffleAndSoldNumbers = async () => {
     try {
+      console.log('Iniciando carregamento do RaffleSelector...');
       setIsLoading(true);
       
       // Buscar sorteio ativo
@@ -64,6 +65,8 @@ const RaffleSelector = () => {
         .limit(1)
         .maybeSingle();
 
+      console.log('Resultado sorteio ativo RaffleSelector:', { raffle, raffleError });
+
       if (raffleError) {
         console.error('Erro ao buscar sorteio ativo:', raffleError);
         setIsLoading(false);
@@ -71,15 +74,17 @@ const RaffleSelector = () => {
       }
 
       if (!raffle) {
-        console.log('Nenhum sorteio ativo encontrado');
+        console.log('Nenhum sorteio ativo encontrado no RaffleSelector');
         setIsLoading(false);
         return;
       }
 
+      console.log('Sorteio ativo encontrado, carregando números vendidos...');
       setActiveRaffleId(raffle.id);
       await loadSoldNumbers(raffle.id);
+      setIsLoading(false);
     } catch (error) {
-      console.error('Erro ao carregar dados:', error);
+      console.error('Erro ao carregar dados do RaffleSelector:', error);
       setIsLoading(false);
     }
   };
@@ -87,7 +92,14 @@ const RaffleSelector = () => {
   const loadSoldNumbers = async (raffleId?: string) => {
     try {
       const targetRaffleId = raffleId || activeRaffleId;
-      if (!targetRaffleId) return;
+      console.log('loadSoldNumbers chamado com:', { raffleId, activeRaffleId, targetRaffleId });
+      
+      if (!targetRaffleId) {
+        console.log('Nenhum raffleId fornecido, interrompendo...');
+        return;
+      }
+
+      console.log('Buscando números vendidos para raffle:', targetRaffleId);
 
       // Buscar números já vendidos do sorteio ativo específico
       const { data, error } = await supabase
@@ -96,17 +108,23 @@ const RaffleSelector = () => {
         .eq('raffle_id', targetRaffleId)
         .eq('payment_status', 'paid');
 
+      console.log('Resultado busca números vendidos:', { data, error });
+
       if (error) {
         console.error('Erro ao carregar números vendidos:', error);
         return;
       }
 
       const sold = data?.map(ticket => ticket.ticket_number) || [];
+      console.log('Números vendidos encontrados:', sold);
       setSoldNumbers(sold);
     } catch (error) {
       console.error('Erro ao carregar números vendidos:', error);
     } finally {
-      if (!raffleId) setIsLoading(false);
+      if (!raffleId) {
+        console.log('Finalizando loading...');
+        setIsLoading(false);
+      }
     }
   };
 
