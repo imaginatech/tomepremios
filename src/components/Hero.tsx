@@ -28,7 +28,7 @@ const Hero = () => {
 
     // Configurar realtime para atualizações de tickets
     const channel = supabase
-      .channel('raffle-tickets-updates')
+      .channel(`hero-raffle-${activeRaffleId}`)
       .on(
         'postgres_changes',
         {
@@ -38,15 +38,17 @@ const Hero = () => {
           filter: `raffle_id=eq.${activeRaffleId}`
         },
         (payload) => {
-          console.log('Atualização de ticket detectada:', payload);
-          // Recarregar dados quando houver mudanças
-          loadRaffleData();
+          console.log('Atualização de ticket detectada no Hero:', payload);
+          // Recarregar apenas os dados dos tickets para otimizar
+          loadTicketsCount();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Status da subscription realtime Hero:', status);
+      });
 
     return () => {
-      console.log('Removendo subscription realtime');
+      console.log('Removendo subscription realtime Hero');
       supabase.removeChannel(channel);
     };
   }, [activeRaffleId]);
@@ -108,6 +110,37 @@ const Hero = () => {
     } catch (error) {
       console.error('Erro ao carregar dados do sorteio:', error);
       setRaffleData(prev => ({ ...prev, isLoading: false }));
+    }
+  };
+
+  const loadTicketsCount = async () => {
+    if (!activeRaffleId) return;
+
+    try {
+      console.log('Atualizando contagem de tickets em tempo real...');
+      
+      // Buscar apenas números vendidos para otimizar
+      const { data: tickets, error: ticketsError } = await supabase
+        .from('raffle_tickets')
+        .select('ticket_number')
+        .eq('raffle_id', activeRaffleId)
+        .eq('payment_status', 'paid');
+
+      if (ticketsError) {
+        console.error('Erro ao buscar tickets para atualização:', ticketsError);
+        return;
+      }
+
+      const soldCount = tickets?.length || 0;
+      console.log(`Atualização realtime - Tickets vendidos: ${soldCount}/${raffleData.totalTickets}`);
+
+      // Atualizar apenas o soldTickets mantendo os outros dados
+      setRaffleData(prev => ({
+        ...prev,
+        soldTickets: soldCount
+      }));
+    } catch (error) {
+      console.error('Erro ao atualizar contagem de tickets:', error);
     }
   };
 
