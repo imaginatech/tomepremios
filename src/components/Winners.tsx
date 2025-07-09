@@ -32,6 +32,31 @@ const Winners = () => {
 
   useEffect(() => {
     fetchWinnersAndStats();
+
+    // Configurar realtime para atualizações de sorteios concluídos
+    const channel = supabase
+      .channel('winners-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'raffles',
+          filter: 'status=eq.completed'
+        },
+        (payload) => {
+          console.log('Novo ganhador detectado:', payload);
+          // Recarregar dados quando um sorteio for concluído
+          fetchWinnersAndStats();
+        }
+      )
+      .subscribe((status) => {
+        console.log('Status da subscription Winners:', status);
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchWinnersAndStats = async () => {
