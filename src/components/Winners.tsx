@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Winner {
-  id: number;
+  id: string;
   name: string;
   number: string;
   prize: string;
@@ -62,6 +62,7 @@ const Winners = () => {
   const fetchWinnersAndStats = async () => {
     try {
       console.log('Buscando ganhadores...');
+      
       // Buscar sorteios concluídos com ganhadores
       const { data: completedRaffles, error: rafflesError } = await supabase
         .from('raffles')
@@ -75,27 +76,35 @@ const Winners = () => {
 
       if (rafflesError) {
         console.error('Error fetching completed raffles:', rafflesError);
+        return;
       }
 
-      // Buscar tickets dos ganhadores
+      // Buscar dados dos ganhadores para cada sorteio
       const winnersData: Winner[] = [];
-      if (completedRaffles) {
-        for (const raffle of completedRaffles) {
-          // First get the winning ticket
+      if (completedRaffles && completedRaffles.length > 0) {
+        for (let i = 0; i < completedRaffles.length; i++) {
+          const raffle = completedRaffles[i];
+          
+          // Primeiro buscar o ticket ganhador
           const { data: winningTicket, error: ticketError } = await supabase
             .from('raffle_tickets')
             .select('ticket_number, user_id')
             .eq('raffle_id', raffle.id)
             .eq('ticket_number', raffle.winning_number)
+            .eq('payment_status', 'paid')
             .single();
 
+          console.log(`Ticket ganhador para raffle ${raffle.id}:`, winningTicket);
+
           if (!ticketError && winningTicket) {
-            // Then get the user profile
+            // Depois buscar o perfil do usuário
             const { data: userProfile, error: profileError } = await supabase
               .from('profiles')
               .select('full_name')
               .eq('id', winningTicket.user_id)
               .single();
+
+            console.log(`Perfil do ganhador para raffle ${raffle.id}:`, userProfile);
 
             if (!profileError && userProfile) {
               const winnerName = userProfile.full_name || 'Usuário';
@@ -106,44 +115,52 @@ const Winners = () => {
                 : `${winnerName.charAt(0)}.`;
 
               winnersData.push({
-                id: Math.random(),
+                id: raffle.id,
                 name: maskedName,
                 number: String(raffle.winning_number).padStart(3, '0'),
-                prize: `R$ ${raffle.prize_value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+                prize: `R$ ${Number(raffle.prize_value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
                 date: raffle.draw_date,
-                edition: `#${String(completedRaffles.indexOf(raffle) + 1).padStart(3, '0')}`
+                edition: `#${String(i + 1).padStart(3, '0')}`
               });
+            } else {
+              console.error(`Erro ao buscar perfil para raffle ${raffle.id}:`, profileError);
             }
+          } else {
+            console.error(`Erro ao buscar ticket para raffle ${raffle.id}:`, ticketError);
           }
         }
       }
 
+      console.log('Dados dos ganhadores processados:', winnersData);
       setWinners(winnersData);
 
-      // Buscar estatísticas
-      // 1. Número de sorteios realizados (concluídos)
-      const { count: completedCount } = await supabase
-        .from('raffles')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'completed');
-
-      // 2. Total distribuído (soma dos prêmios dos sorteios concluídos)
-      const { data: totalPrizes } = await supabase
-        .from('raffles')
-        .select('prize_value')
-        .eq('status', 'completed');
+      // Buscar estatísticas em paralelo
+      const [
+        { count: completedCount },
+        { data: totalPrizes },
+        { count: totalUsersCount }
+      ] = await Promise.all([
+        supabase
+          .from('raffles')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'completed'),
+        supabase
+          .from('raffles')
+          .select('prize_value')
+          .eq('status', 'completed'),
+        supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true })
+      ]);
 
       const totalDistributed = totalPrizes?.reduce((sum, raffle) => sum + Number(raffle.prize_value), 0) || 0;
 
-      // 3. Total de usuários cadastrados na plataforma
-      const { count: totalUsersCount } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true });
+      console.log('Estatísticas:', { completedCount, totalDistributed, totalUsersCount });
 
       setStats({
         completedRaffles: completedCount || 0,
         totalDistributed,
-        totalParticipants: totalUsersCount || 0, // Agora mostra total de usuários cadastrados
+        totalParticipants: totalUsersCount || 0,
         totalUsers: totalUsersCount || 0
       });
 
