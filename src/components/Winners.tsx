@@ -68,8 +68,8 @@ const Winners = () => {
         .select('*')
         .eq('status', 'completed')
         .not('winning_number', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(3);
+        .order('updated_at', { ascending: false })
+        .limit(7);
 
       console.log('Sorteios concluídos encontrados:', completedRaffles);
 
