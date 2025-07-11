@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { createHash, createHmac } from "https://deno.land/std@0.168.0/node/crypto.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -27,28 +26,27 @@ serve(async (req) => {
   try {
     console.log('Webhook do Paggue recebido');
 
-    const webhookSecret = Deno.env.get('PAGGUE_SIGNATURE_TOKEN');
+    const signatureToken = Deno.env.get('PAGGUE_SIGNATURE_TOKEN');
     
-    if (!webhookSecret) {
+    if (!signatureToken) {
       console.error('Token de assinatura não configurado');
       return new Response('Signature token not configured', { status: 500 });
     }
 
     // Verificar assinatura do webhook
     const signature = req.headers.get('X-Paggue-Signature');
-    const body = await req.text();
-    
-    if (signature) {
-      const expectedSignature = createHmac('sha256', webhookSecret)
-        .update(body)
-        .digest('hex');
-      
-      if (signature !== expectedSignature) {
-        console.error('Assinatura do webhook inválida');
-        return new Response('Invalid signature', { status: 401 });
-      }
+    if (!signature) {
+      console.error('Assinatura do webhook não fornecida');
+      return new Response('Unauthorized', { status: 401 });
     }
 
+    // Verificar se a assinatura é válida
+    if (signature !== signatureToken) {
+      console.error('Assinatura inválida:', { received: signature, expected: signatureToken });
+      return new Response('Invalid signature', { status: 401 });
+    }
+
+    const body = await req.text();
     const payload: PaggueWebhookPayload = JSON.parse(body);
     console.log('Payload do webhook:', payload);
 
@@ -58,11 +56,11 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Processar apenas eventos de pagamento
+    // Processar apenas eventos de cobrança paga
     if (payload.event === 'charge.paid' && payload.data.status === 'paid') {
-      console.log('Processando pagamento confirmado:', payload.data.id);
-
-      // Buscar pagamento no banco
+      console.log('Processando pagamento aprovado:', payload.data.id);
+      
+      // Buscar o pagamento no banco de dados
       const { data: payment, error: paymentError } = await supabase
         .from('pix_payments')
         .select('*')
@@ -71,7 +69,7 @@ serve(async (req) => {
 
       if (paymentError || !payment) {
         console.error('Pagamento não encontrado:', paymentError);
-        return new Response('Payment not found', { status: 404 });
+        return new Response('Payment not found', { status: 404, headers: corsHeaders });
       }
 
       // Atualizar status do pagamento
@@ -80,57 +78,49 @@ serve(async (req) => {
         .update({
           status: 'paid',
           paid_at: payload.data.paid_at || new Date().toISOString(),
-          paggue_webhook_data: payload.data
+          paggue_webhook_data: payload.data,
         })
         .eq('id', payment.id);
 
       if (updateError) {
         console.error('Erro ao atualizar pagamento:', updateError);
-        return new Response('Error updating payment', { status: 500 });
+        return new Response('Database error', { status: 500, headers: corsHeaders });
       }
 
-      // Reservar números
+      // Reservar os números
       try {
-        const { data: reserveResult, error: reserveError } = await supabase
-          .rpc('reserve_numbers', {
-            p_user_id: payment.user_id,
-            p_numbers: payment.selected_numbers
-          });
+        const { error: reserveError } = await supabase.rpc('reserve_numbers', {
+          p_user_id: payment.user_id,
+          p_numbers: payment.selected_numbers,
+        });
 
         if (reserveError) {
           console.error('Erro ao reservar números:', reserveError);
-          throw reserveError;
+          return new Response('Failed to reserve numbers', { status: 500, headers: corsHeaders });
         }
 
-        console.log('Números reservados com sucesso:', reserveResult);
-
-        // Processar bônus de afiliado se aplicável
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('referred_by')
-          .eq('id', payment.user_id)
-          .single();
-
-        if (profile?.referred_by) {
-          console.log('Processando bônus de afiliado para código:', profile.referred_by);
-          
-          // Chamar edge function para processar bônus
-          await supabase.functions.invoke('process-affiliate-bonus', {
-            body: {
-              referred_user_id: payment.user_id,
-              affiliate_code: profile.referred_by,
-              raffle_id: payment.raffle_id,
-              selected_numbers: payment.selected_numbers
-            }
-          });
-        }
-
+        console.log('Números reservados com sucesso');
       } catch (error) {
-        console.error('Erro no processamento pós-pagamento:', error);
-        // Não retornar erro para não fazer o Paggue reenviar o webhook
+        console.error('Erro ao chamar reserve_numbers:', error);
+        return new Response('Failed to reserve numbers', { status: 500, headers: corsHeaders });
       }
 
-      console.log('Webhook processado com sucesso');
+      // Processar bônus de afiliado se houver código de indicação
+      if (payment.user_id) {
+        try {
+          const response = await supabase.functions.invoke('process-affiliate-bonus', {
+            body: { userId: payment.user_id, paymentId: payment.id }
+          });
+          
+          if (response.error) {
+            console.error('Erro ao processar bônus de afiliado:', response.error);
+          } else {
+            console.log('Bônus de afiliado processado com sucesso');
+          }
+        } catch (error) {
+          console.error('Erro ao chamar process-affiliate-bonus:', error);
+        }
+      }
     }
 
     return new Response(
