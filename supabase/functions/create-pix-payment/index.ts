@@ -32,8 +32,16 @@ serve(async (req) => {
 
   try {
     console.log('Iniciando criação de pagamento PIX com Paggue');
+    
+    // Verificar se o método é POST
+    if (req.method !== 'POST') {
+      throw new Error('Método não permitido');
+    }
 
-    const { userId, selectedNumbers, total } = await req.json();
+    const requestBody = await req.json();
+    console.log('Dados recebidos:', requestBody);
+    
+    const { userId, selectedNumbers, total } = requestBody;
 
     if (!userId || !selectedNumbers || !total) {
       throw new Error('Dados obrigatórios não fornecidos');

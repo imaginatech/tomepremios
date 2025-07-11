@@ -159,9 +159,11 @@ export function PixPaymentModal({ isOpen, onClose, onSuccess, selectedNumbers, t
         }
       });
 
+      console.log('Resposta da edge function:', { data, error });
+
       if (error) {
         console.error('Erro ao criar pagamento:', error);
-        throw new Error("Erro ao criar pagamento PIX");
+        throw new Error(`Erro ao criar pagamento PIX: ${error.message || 'Erro desconhecido'}`);
       }
 
       if (!data.success) {
