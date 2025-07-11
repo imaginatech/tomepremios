@@ -6,26 +6,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-interface PagguePixPayload {
-  method: string
-  amount: number
-  customer: {
-    name: string
-    email: string
-    document: string
-  }
-  description: string
-}
-
 interface PagguePixResponse {
-  id: string
+  hash: string
+  payer_name: string
   amount: number
-  status: string
-  pix: {
-    qr_code: string
-    qr_code_image: string
-    expires_at: string
-  }
+  description: string
+  external_id: string
+  paid_at: string | null
+  created_at: string
+  expiration_at: string | null
+  payment: string // PIX Copia e Cola
+  status: number // 0 = pending, 1 = paid
+  endToEndId: string | null
+  reference: string
 }
 
 serve(async (req) => {
@@ -94,8 +87,8 @@ serve(async (req) => {
     }
 
     const paggueBaseUrl = paggueEnvironment === 'production' 
-      ? 'https://api.paggue.io'
-      : 'https://sandbox.paggue.io';
+      ? 'https://ms.paggue.io'
+      : 'https://ms.paggue.io';
 
     console.log('Configuração Paggue:', { 
       environment: paggueEnvironment, 
@@ -103,26 +96,26 @@ serve(async (req) => {
       hasApiKey: !!paggueApiKey 
     });
 
-    // Preparar payload para Paggue
-    const pixPayload: PagguePixPayload = {
-      method: 'pix',
+    // Preparar payload para Paggue (conforme documentação oficial)
+    const pixPayload = {
+      payer_name: profile.full_name || 'Cliente',
       amount: Math.round(total * 100), // Converter para centavos
-      customer: {
-        name: profile.full_name || 'Cliente',
-        email: profile.whatsapp || 'cliente@exemplo.com', // Campo obrigatório
-        document: '00000000000', // CPF fictício para sandbox
-      },
+      external_id: `rifa_${userId}_${Date.now()}`, // ID único para evitar duplicatas
       description: `Compra de ${selectedNumbers.length} números da rifa: ${activeRaffle?.title || 'Rifinha'}`,
+      meta: {
+        extra_data: `numbers_${selectedNumbers.join('_')}`,
+      }
     };
 
     console.log('Payload Paggue:', JSON.stringify(pixPayload, null, 2));
 
     // Criar pagamento PIX na Paggue
-    const paggueResponse = await fetch(`${paggueBaseUrl}/v1/charges`, {
+    const paggueResponse = await fetch(`${paggueBaseUrl}/cashin/api/billing_order`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${paggueApiKey}`,
         'Content-Type': 'application/json',
+        'X-Company-ID': '203', // Usar company ID do exemplo da documentação
       },
       body: JSON.stringify(pixPayload),
     });
@@ -146,10 +139,10 @@ serve(async (req) => {
         selected_numbers: selectedNumbers,
         amount: total,
         status: 'pending',
-        paggue_transaction_id: paggueData.id,
-        qr_code_image: paggueData.pix?.qr_code_image || '',
-        pix_code: paggueData.pix?.qr_code || '',
-        expires_at: paggueData.pix?.expires_at || null,
+        paggue_transaction_id: paggueData.hash, // Usar hash como ID da transação
+        qr_code_image: '', // Paggue não retorna QR code image, apenas o PIX Copia e Cola
+        pix_code: paggueData.payment, // PIX Copia e Cola
+        expires_at: paggueData.expiration_at,
       })
       .select()
       .single();
@@ -166,12 +159,12 @@ serve(async (req) => {
         success: true,
         payment: {
           id: pixPayment.id,
-          qr_code: paggueData.pix?.qr_code || '',
-          qr_code_image: paggueData.pix?.qr_code_image || '',
-          pix_code: paggueData.pix?.qr_code || '',
+          qr_code: paggueData.payment, // PIX Copia e Cola
+          qr_code_image: '', // Paggue não fornece QR code image
+          pix_code: paggueData.payment, // PIX Copia e Cola
           amount: total,
-          expires_at: paggueData.pix?.expires_at || null,
-          paggue_transaction_id: paggueData.id
+          expires_at: paggueData.expiration_at,
+          paggue_transaction_id: paggueData.hash
         }
       }),
       { 

@@ -7,14 +7,18 @@ const corsHeaders = {
 }
 
 interface PaggueWebhookPayload {
-  event: string
-  data: {
-    id: string
-    status: string
-    amount: number
-    paid_at?: string
-    [key: string]: any
-  }
+  hash: string
+  external_id: string
+  endToEndId?: string
+  reference: string
+  payer_name: string
+  amount: number
+  description: string
+  status: number // 0 = pending, 1 = paid
+  paid_at: string | null
+  created_at: string
+  expiration_at: string | null
+  payment: string
 }
 
 serve(async (req) => {
@@ -33,20 +37,37 @@ serve(async (req) => {
       return new Response('Signature token not configured', { status: 500 });
     }
 
-    // Verificar assinatura do webhook
-    const signature = req.headers.get('X-Paggue-Signature');
+    const body = await req.text();
+    
+    // Verificar assinatura do webhook (usando HMAC SHA-256)
+    const signature = req.headers.get('Signature');
     if (!signature) {
       console.error('Assinatura do webhook não fornecida');
       return new Response('Unauthorized', { status: 401 });
     }
 
-    // Verificar se a assinatura é válida
-    if (signature !== signatureToken) {
-      console.error('Assinatura inválida:', { received: signature, expected: signatureToken });
+    // Verificar assinatura HMAC
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(signatureToken);
+    const key = await crypto.subtle.importKey(
+      'raw',
+      keyData,
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+    
+    const bodyData = encoder.encode(body);
+    const signatureBuffer = await crypto.subtle.sign('HMAC', key, bodyData);
+    const computedSignature = Array.from(new Uint8Array(signatureBuffer))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+
+    if (signature !== computedSignature) {
+      console.error('Assinatura inválida:', { received: signature, computed: computedSignature });
       return new Response('Invalid signature', { status: 401 });
     }
 
-    const body = await req.text();
     const payload: PaggueWebhookPayload = JSON.parse(body);
     console.log('Payload do webhook:', payload);
 
@@ -56,15 +77,15 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Processar apenas eventos de cobrança paga
-    if (payload.event === 'charge.paid' && payload.data.status === 'paid') {
-      console.log('Processando pagamento aprovado:', payload.data.id);
+    // Processar apenas pagamentos pagos (status = 1)
+    if (payload.status === 1) {
+      console.log('Processando pagamento aprovado:', payload.hash);
       
-      // Buscar o pagamento no banco de dados
+      // Buscar o pagamento no banco de dados pelo hash
       const { data: payment, error: paymentError } = await supabase
         .from('pix_payments')
         .select('*')
-        .eq('paggue_transaction_id', payload.data.id)
+        .eq('paggue_transaction_id', payload.hash)
         .single();
 
       if (paymentError || !payment) {
@@ -77,8 +98,8 @@ serve(async (req) => {
         .from('pix_payments')
         .update({
           status: 'paid',
-          paid_at: payload.data.paid_at || new Date().toISOString(),
-          paggue_webhook_data: payload.data,
+          paid_at: payload.paid_at || new Date().toISOString(),
+          paggue_webhook_data: payload,
         })
         .eq('id', payment.id);
 
