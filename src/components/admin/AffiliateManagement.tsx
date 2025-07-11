@@ -87,27 +87,39 @@ const AffiliateManagement = () => {
 
   const fetchAffiliates = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: affiliatesData, error } = await supabase
         .from('affiliates')
-        .select(`
-          *,
-          profiles (
-            full_name,
-            whatsapp
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+
+      if (!affiliatesData) {
+        setAffiliates([]);
+        return;
+      }
+
+      // Buscar profiles separadamente
+      const userIds = affiliatesData.map(a => a.user_id);
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, full_name, whatsapp')
+        .in('id', userIds);
+
+      // Combinar dados
+      const affiliatesWithProfiles = affiliatesData.map(affiliate => ({
+        ...affiliate,
+        profiles: profilesData?.find(p => p.id === affiliate.user_id) || null
+      }));
       
-      setAffiliates(data || []);
+      setAffiliates(affiliatesWithProfiles);
       
       // Buscar estatísticas para cada afiliado
-      if (data) {
-        const statsPromises = data.map(affiliate => fetchAffiliateStats(affiliate.id));
+      if (affiliatesWithProfiles.length > 0) {
+        const statsPromises = affiliatesWithProfiles.map(affiliate => fetchAffiliateStats(affiliate.id));
         const statsResults = await Promise.all(statsPromises);
         
-        const statsMap = data.reduce((acc, affiliate, index) => {
+        const statsMap = affiliatesWithProfiles.reduce((acc, affiliate, index) => {
           acc[affiliate.id] = statsResults[index];
           return acc;
         }, {} as Record<string, AffiliateStats>);
@@ -170,31 +182,54 @@ const AffiliateManagement = () => {
       // Buscar indicações
       const { data: referralsData } = await supabase
         .from('affiliate_referrals')
-        .select(`
-          *,
-          profiles!affiliate_referrals_referred_user_id_fkey (
-            full_name,
-            whatsapp
-          )
-        `)
+        .select('*')
         .eq('affiliate_id', affiliate.id)
         .order('created_at', { ascending: false });
+
+      if (referralsData && referralsData.length > 0) {
+        // Buscar profiles dos usuários indicados
+        const referredUserIds = referralsData.map(r => r.referred_user_id);
+        const { data: referredProfiles } = await supabase
+          .from('profiles')
+          .select('id, full_name, whatsapp')
+          .in('id', referredUserIds);
+
+        // Combinar dados de indicações com profiles
+        const referralsWithProfiles = referralsData.map(referral => ({
+          ...referral,
+          profiles: referredProfiles?.find(p => p.id === referral.referred_user_id) || null
+        }));
+
+        setReferrals(referralsWithProfiles);
+      } else {
+        setReferrals([]);
+      }
 
       // Buscar números bônus
       const { data: bonusData } = await supabase
         .from('affiliate_bonus_numbers')
-        .select(`
-          *,
-          raffles (
-            title,
-            status
-          )
-        `)
+        .select('*')
         .eq('affiliate_id', affiliate.id)
         .order('created_at', { ascending: false });
 
-      setReferrals(referralsData || []);
-      setBonusNumbers(bonusData || []);
+      if (bonusData && bonusData.length > 0) {
+        // Buscar dados dos sorteios
+        const raffleIds = bonusData.map(b => b.raffle_id);
+        const { data: rafflesData } = await supabase
+          .from('raffles')
+          .select('id, title, status')
+          .in('id', raffleIds);
+
+        // Combinar dados de bônus com sorteios
+        const bonusWithRaffles = bonusData.map(bonus => ({
+          ...bonus,
+          raffles: rafflesData?.find(r => r.id === bonus.raffle_id) || null
+        }));
+
+        setBonusNumbers(bonusWithRaffles);
+      } else {
+        setBonusNumbers([]);
+      }
       setSelectedAffiliate(affiliate);
       setShowDetails(true);
     } catch (error) {
