@@ -121,7 +121,7 @@ const PixPaymentModal = ({ isOpen, onClose, onSuccess, selectedNumbers, total }:
           description: "Seus números foram reservados com sucesso!",
         });
 
-        onSuccess();
+        // onSuccess(); // Removido para manter o modal aberto
       } catch (error: any) {
         console.error('Erro ao reservar números:', error);
         setPaymentStatus('pending');
