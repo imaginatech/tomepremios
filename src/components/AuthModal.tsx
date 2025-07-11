@@ -1,10 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Mail, Lock, User, Loader, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -20,8 +21,18 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
   const [fullName, setFullName] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [loading, setLoading] = useState(false);
+  const [affiliateCode, setAffiliateCode] = useState('');
   const { signIn, signUp } = useAuth();
   const { toast } = useToast();
+
+  // Verificar se há código de afiliado na URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const refCode = urlParams.get('ref');
+    if (refCode) {
+      setAffiliateCode(refCode);
+    }
+  }, []);
 
   if (!isOpen) return null;
 
@@ -89,9 +100,36 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
         }
       }
 
-      const { error } = isLogin 
-        ? await signIn(email, password)
-        : await signUp(email, password, fullName, whatsapp);
+      let result;
+      if (isLogin) {
+        result = await signIn(email, password);
+      } else {
+        result = await signUp(email, password, fullName, whatsapp);
+        
+        // Se há código de afiliado e cadastro foi bem-sucedido, processar indicação
+        if (affiliateCode && result.user) {
+          try {
+            const { error: referralError } = await supabase
+              .rpc('process_affiliate_referral', {
+                p_referred_user_id: result.user.id,
+                p_affiliate_code: affiliateCode
+              });
+
+            if (referralError) {
+              console.error('Erro ao processar indicação:', referralError);
+            } else {
+              toast({
+                title: "Indicação registrada!",
+                description: "Você foi indicado por um afiliado.",
+              });
+            }
+          } catch (error) {
+            console.error('Erro ao processar indicação:', error);
+          }
+        }
+      }
+
+      const { error } = result;
 
       if (error) {
         let errorMessage = "Ocorreu um erro. Tente novamente.";
@@ -233,6 +271,26 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                   required
                   minLength={6}
                 />
+              </div>
+            </div>
+          )}
+
+          {!isLogin && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Código de Indicação (opcional)</label>
+              <div className="relative">
+                <Input
+                  type="text"
+                  placeholder="Código do afiliado que te indicou"
+                  value={affiliateCode}
+                  onChange={(e) => setAffiliateCode(e.target.value.toUpperCase())}
+                  className="uppercase"
+                />
+                {affiliateCode && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Você foi indicado pelo código: {affiliateCode}
+                  </p>
+                )}
               </div>
             </div>
           )}

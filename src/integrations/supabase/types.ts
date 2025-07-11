@@ -14,6 +14,117 @@ export type Database = {
   }
   public: {
     Tables: {
+      affiliate_bonus_numbers: {
+        Row: {
+          affiliate_id: string
+          bonus_numbers: number[]
+          created_at: string
+          id: string
+          raffle_id: string
+        }
+        Insert: {
+          affiliate_id: string
+          bonus_numbers: number[]
+          created_at?: string
+          id?: string
+          raffle_id: string
+        }
+        Update: {
+          affiliate_id?: string
+          bonus_numbers?: number[]
+          created_at?: string
+          id?: string
+          raffle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_bonus_numbers_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_bonus_numbers_raffle_id_fkey"
+            columns: ["raffle_id"]
+            isOneToOne: false
+            referencedRelation: "raffles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_referrals: {
+        Row: {
+          affiliate_id: string
+          created_at: string
+          id: string
+          raffle_id: string | null
+          referred_user_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          affiliate_id: string
+          created_at?: string
+          id?: string
+          raffle_id?: string | null
+          referred_user_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          affiliate_id?: string
+          created_at?: string
+          id?: string
+          raffle_id?: string | null
+          referred_user_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_referrals_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "affiliate_referrals_raffle_id_fkey"
+            columns: ["raffle_id"]
+            isOneToOne: false
+            referencedRelation: "raffles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliates: {
+        Row: {
+          affiliate_code: string
+          created_at: string
+          id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          affiliate_code: string
+          created_at?: string
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          affiliate_code?: string
+          created_at?: string
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pix_payments: {
         Row: {
           amount: number
@@ -68,6 +179,7 @@ export type Database = {
           full_name: string | null
           id: string
           pix_key: string | null
+          referred_by: string | null
           role: string | null
           updated_at: string
           whatsapp: string | null
@@ -77,6 +189,7 @@ export type Database = {
           full_name?: string | null
           id: string
           pix_key?: string | null
+          referred_by?: string | null
           role?: string | null
           updated_at?: string
           whatsapp?: string | null
@@ -86,6 +199,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           pix_key?: string | null
+          referred_by?: string | null
           role?: string | null
           updated_at?: string
           whatsapp?: string | null
@@ -183,6 +297,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_affiliate_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_active_raffle: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -190,6 +308,10 @@ export type Database = {
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      process_affiliate_referral: {
+        Args: { p_referred_user_id: string; p_affiliate_code: string }
+        Returns: boolean
       }
       reserve_numbers: {
         Args: { p_user_id: string; p_numbers: number[] }

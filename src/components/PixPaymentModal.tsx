@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { QrCode, Copy, CheckCircle, Clock, DollarSign, Gift } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import confetti from 'canvas-confetti';
+import AffiliateSignupButton from '@/components/affiliate/AffiliateSignupButton';
 
 interface PixPaymentModalProps {
   isOpen: boolean;
@@ -153,36 +154,51 @@ const PixPaymentModal = ({ isOpen, onClose, onSuccess, selectedNumbers, total }:
   if (paymentStatus === 'confirmed') {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-md mx-4 sm:mx-auto">
-          <div className="text-center py-6 px-2">
-            <div className="relative mb-6">
-              <CheckCircle className="w-20 h-20 text-green-500 mx-auto animate-scale-in" />
-              <Gift className="w-8 h-8 text-yellow-500 absolute -top-2 -right-2 animate-bounce" />
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center text-2xl font-bold">
+              🎉 Pagamento Confirmado!
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              Seus números foram reservados com sucesso!
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+              <div className="flex items-center gap-2 text-green-700 dark:text-green-300 mb-2">
+                <CheckCircle className="w-5 h-5" />
+                <span className="font-medium">Participação confirmada!</span>
+              </div>
+              <p className="text-sm text-green-600 dark:text-green-400">
+                Você está concorrendo com os números: {selectedNumbers.join(', ')}
+              </p>
             </div>
             
-            <h2 className="text-2xl md:text-3xl font-bold text-green-600 mb-3">
-              🎉 Pagamento Confirmado! 🎉
-            </h2>
+            {/* Botão para se tornar afiliado */}
+            <div className="space-y-3">
+              <div className="text-center">
+                <p className="text-sm font-medium text-foreground mb-2">
+                  💰 Quer ganhar números bônus?
+                </p>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Torne-se um afiliado e ganhe números gratuitos para o próximo sorteio a cada indicação que fizer uma compra!
+                </p>
+              </div>
+              <AffiliateSignupButton 
+                onSuccess={(code) => {
+                  toast({
+                    title: "🎉 Agora você é um afiliado!",
+                    description: `Compartilhe seu código ${code} e ganhe números bônus!`,
+                  });
+                }}
+              />
+            </div>
             
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 mb-4">
-              <p className="text-green-800 font-semibold mb-2">
-                Obrigado pela sua participação!
-              </p>
-              <p className="text-sm text-green-700 mb-3">
-                Números reservados: {selectedNumbers.sort((a, b) => a - b).map(n => n.toString().padStart(3, '0')).join(', ')}
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">
+                Boa sorte no sorteio! 🍀
               </p>
             </div>
-
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-4">
-              <h3 className="text-lg font-bold text-blue-800 mb-2">🍀 Boa Sorte! 🍀</h3>
-              <p className="text-sm text-blue-700">
-                Seus números estão participando do sorteio. Que a sorte esteja com você!
-              </p>
-            </div>
-
-            <p className="text-xs text-muted-foreground">
-              Você receberá uma notificação com o resultado do sorteio
-            </p>
           </div>
         </DialogContent>
       </Dialog>
