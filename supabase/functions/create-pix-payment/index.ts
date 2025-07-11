@@ -32,9 +32,12 @@ serve(async (req) => {
 
   try {
     console.log('Iniciando criação de pagamento PIX com Paggue');
+    console.log('Método da requisição:', req.method);
+    console.log('Headers da requisição:', Object.fromEntries(req.headers.entries()));
     
     // Verificar se o método é POST
     if (req.method !== 'POST') {
+      console.error('Método não permitido:', req.method);
       throw new Error('Método não permitido');
     }
 
