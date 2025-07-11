@@ -37,6 +37,12 @@ file_size_limit = "50MiB"
 [edge_functions]
 enabled = true
 
+[functions.create-pix-payment]
+verify_jwt = true
+
+[functions.paggue-webhook]
+verify_jwt = false
+
 [functions.complete-raffle]
 verify_jwt = false
 
