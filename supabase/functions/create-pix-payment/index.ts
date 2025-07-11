@@ -83,6 +83,14 @@ serve(async (req) => {
     const paggueCompanyId = Deno.env.get('PAGGUE_COMPANY_ID');
     const paggueEnvironment = Deno.env.get('PAGGUE_ENVIRONMENT') || 'sandbox';
     
+    console.log('Chaves de ambiente:', {
+      hasApiKey: !!paggueApiKey,
+      apiKeyLength: paggueApiKey ? paggueApiKey.length : 0,
+      hasCompanyId: !!paggueCompanyId,
+      companyId: paggueCompanyId,
+      environment: paggueEnvironment
+    });
+    
     if (!paggueApiKey) {
       throw new Error('API Key da Paggue não configurada');
     }
