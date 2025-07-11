@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      pix_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          expires_at: string | null
+          id: string
+          openpix_charge_id: string | null
+          paid_at: string | null
+          pix_code: string | null
+          qr_code_image: string | null
+          raffle_id: string
+          selected_numbers: number[]
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          openpix_charge_id?: string | null
+          paid_at?: string | null
+          pix_code?: string | null
+          qr_code_image?: string | null
+          raffle_id: string
+          selected_numbers: number[]
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          openpix_charge_id?: string | null
+          paid_at?: string | null
+          pix_code?: string | null
+          qr_code_image?: string | null
+          raffle_id?: string
+          selected_numbers?: number[]
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
