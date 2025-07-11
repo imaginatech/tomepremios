@@ -27,7 +27,7 @@ const PixPaymentModal = ({ isOpen, onClose, onSuccess, selectedNumbers, total }:
   const pixCode = "00020126580014br.gov.bcb.pix0136123e4567-e12b-12d1-a456-426655440000520400005303986540525.005802BR5925PIX DA SORTE DEMONSTRACAO6008SAO PAULO62070503***6304";
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || paymentStatus === 'confirmed') return;
 
     const timer = setInterval(() => {
       setCountdown(prev => {
@@ -46,7 +46,7 @@ const PixPaymentModal = ({ isOpen, onClose, onSuccess, selectedNumbers, total }:
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isOpen, onClose, toast]);
+  }, [isOpen, onClose, toast, paymentStatus]);
 
   // Função para trigger do confete
   const triggerConfetti = () => {
@@ -121,10 +121,7 @@ const PixPaymentModal = ({ isOpen, onClose, onSuccess, selectedNumbers, total }:
           description: "Seus números foram reservados com sucesso!",
         });
 
-        setTimeout(() => {
-          onSuccess();
-          onClose();
-        }, 4000); // Aumentado para 4 segundos para permitir o confete
+        onSuccess();
       } catch (error: any) {
         console.error('Erro ao reservar números:', error);
         setPaymentStatus('pending');
