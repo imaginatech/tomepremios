@@ -80,10 +80,15 @@ serve(async (req) => {
 
     // Configurar API Key da Paggue
     const paggueApiKey = Deno.env.get('PAGGUE_CLIENT_KEY');
+    const paggueCompanyId = Deno.env.get('PAGGUE_COMPANY_ID');
     const paggueEnvironment = Deno.env.get('PAGGUE_ENVIRONMENT') || 'sandbox';
     
     if (!paggueApiKey) {
       throw new Error('API Key da Paggue não configurada');
+    }
+
+    if (!paggueCompanyId) {
+      throw new Error('Company ID da Paggue não configurado');
     }
 
     const paggueBaseUrl = paggueEnvironment === 'production' 
@@ -115,7 +120,7 @@ serve(async (req) => {
       headers: {
         'Authorization': `Bearer ${paggueApiKey}`,
         'Content-Type': 'application/json',
-        'X-Company-ID': '203', // Usar company ID do exemplo da documentação
+        'X-Company-ID': paggueCompanyId,
       },
       body: JSON.stringify(pixPayload),
     });
