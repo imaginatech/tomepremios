@@ -75,17 +75,53 @@ serve(async (req) => {
       throw new Error('Nenhum sorteio ativo encontrado');
     }
 
-    // Configurar dados para Paggue
-    const paggueApiKey = Deno.env.get('PAGGUE_API_KEY');
+    // Configurar credenciais Paggue
+    const paggueClientKey = Deno.env.get('PAGGUE_CLIENT_KEY');
+    const paggueClientSecret = Deno.env.get('PAGGUE_CLIENT_SECRET');
     const paggueEnvironment = Deno.env.get('PAGGUE_ENVIRONMENT') || 'sandbox';
     
-    if (!paggueApiKey) {
-      throw new Error('Chave da API Paggue não configurada');
+    if (!paggueClientKey || !paggueClientSecret) {
+      throw new Error('Credenciais da Paggue não configuradas');
     }
 
     const paggueBaseUrl = paggueEnvironment === 'production' 
       ? 'https://api.paggue.io'
       : 'https://sandbox-api.paggue.io';
+
+    console.log('Configuração Paggue:', { 
+      environment: paggueEnvironment, 
+      baseUrl: paggueBaseUrl,
+      hasClientKey: !!paggueClientKey,
+      hasClientSecret: !!paggueClientSecret 
+    });
+
+    // Obter token de acesso
+    const authResponse = await fetch(`${paggueBaseUrl}/oauth/token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        grant_type: 'client_credentials',
+        client_id: paggueClientKey,
+        client_secret: paggueClientSecret
+      }),
+    });
+
+    if (!authResponse.ok) {
+      const authError = await authResponse.text();
+      console.error('Erro na autenticação Paggue:', authError);
+      throw new Error(`Erro na autenticação: ${authResponse.status}`);
+    }
+
+    const authData = await authResponse.json();
+    const accessToken = authData.access_token;
+    
+    if (!accessToken) {
+      throw new Error('Token de acesso não recebido');
+    }
+
+    console.log('Token de acesso obtido com sucesso');
 
     // Preparar payload para Paggue
     const pixPayload: PagguePixPayload = {
@@ -101,7 +137,7 @@ serve(async (req) => {
     const paggueResponse = await fetch(`${paggueBaseUrl}/v1/charges/pix`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${paggueApiKey}`,
+        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(pixPayload),

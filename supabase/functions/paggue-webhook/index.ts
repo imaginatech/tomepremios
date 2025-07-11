@@ -27,11 +27,11 @@ serve(async (req) => {
   try {
     console.log('Webhook do Paggue recebido');
 
-    const webhookSecret = Deno.env.get('PAGGUE_WEBHOOK_SECRET');
+    const webhookSecret = Deno.env.get('PAGGUE_SIGNATURE_TOKEN');
     
     if (!webhookSecret) {
-      console.error('Secret do webhook não configurado');
-      return new Response('Webhook secret not configured', { status: 500 });
+      console.error('Token de assinatura não configurado');
+      return new Response('Signature token not configured', { status: 500 });
     }
 
     // Verificar assinatura do webhook
