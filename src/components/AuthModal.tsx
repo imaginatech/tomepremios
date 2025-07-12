@@ -11,9 +11,10 @@ interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  affiliateCode?: string | null;
 }
 
-const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => {
+const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, affiliateCode: propAffiliateCode }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,14 +26,18 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
   const { signIn, signUp } = useAuth();
   const { toast } = useToast();
 
-  // Verificar se há código de afiliado na URL
+  // Verificar se há código de afiliado na URL ou recebido como prop
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const refCode = urlParams.get('ref');
-    if (refCode) {
-      setAffiliateCode(refCode);
+    if (propAffiliateCode) {
+      setAffiliateCode(propAffiliateCode);
+    } else {
+      const urlParams = new URLSearchParams(window.location.search);
+      const refCode = urlParams.get('ref');
+      if (refCode) {
+        setAffiliateCode(refCode);
+      }
     }
-  }, []);
+  }, [propAffiliateCode]);
 
   if (!isOpen) return null;
 

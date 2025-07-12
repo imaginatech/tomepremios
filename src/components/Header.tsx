@@ -8,7 +8,11 @@ import { supabase } from '@/integrations/supabase/client';
 import AuthModal from './AuthModal';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-const Header = () => {
+interface HeaderProps {
+  affiliateCode?: string | null;
+}
+
+const Header: React.FC<HeaderProps> = ({ affiliateCode }) => {
   const { user, signOut } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -151,6 +155,7 @@ const Header = () => {
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         onSuccess={handleAuthSuccess}
+        affiliateCode={affiliateCode}
       />
     </>
   );
