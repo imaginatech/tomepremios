@@ -31,13 +31,13 @@ serve(async (req) => {
     const body = await req.json() as WebhookPayload;
     console.log('Webhook payload recebido:', JSON.stringify(body, null, 2));
 
-    // Verificar se é um novo ticket pago
-    if (body.type !== 'INSERT' || body.table !== 'raffle_tickets' || body.record?.payment_status !== 'paid') {
-      console.log('Evento não é um novo ticket pago, ignorando');
+    // Verificar se é um ticket sendo pago (INSERT ou UPDATE)
+    if (body.table !== 'raffle_tickets' || body.record?.payment_status !== 'paid') {
+      console.log('Evento não é um ticket pago, ignorando');
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: 'Evento não processado - não é um novo ticket pago',
+          message: 'Evento não processado - não é um ticket pago',
           details: {
             type: body.type,
             table: body.table,
@@ -49,6 +49,27 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
+    }
+
+    // Para UPDATEs, verificar se o status mudou para 'paid'
+    if (body.type === 'UPDATE') {
+      const oldStatus = body.old_record?.payment_status;
+      const newStatus = body.record?.payment_status;
+      
+      if (oldStatus === 'paid' || newStatus !== 'paid') {
+        console.log('UPDATE não é uma mudança para status paid, ignorando');
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: 'UPDATE não é mudança para paid',
+            details: { oldStatus, newStatus }
+          }),
+          { 
+            status: 200, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
     }
 
     const ticketData = body.record;
