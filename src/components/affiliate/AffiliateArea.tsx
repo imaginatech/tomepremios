@@ -51,21 +51,17 @@ const AffiliateArea = () => {
 
   const fetchAffiliateData = async () => {
     try {
-      console.log('Buscando dados do afiliado para usuário:', user?.id);
-      
       // Buscar dados do afiliado
       const { data: affiliate, error: affiliateError } = await supabase
         .from('affiliates')
         .select('*')
         .eq('user_id', user?.id)
-        .maybeSingle();
+        .single();
 
-      if (affiliateError) {
-        console.error('Erro ao buscar afiliado:', affiliateError);
+      if (affiliateError && affiliateError.code !== 'PGRST116') {
         throw affiliateError;
       }
 
-      console.log('Dados do afiliado encontrados:', affiliate);
       setAffiliateData(affiliate);
 
       if (affiliate) {

@@ -131,8 +131,7 @@ export type Database = {
           created_at: string
           expires_at: string | null
           id: string
-          paggue_transaction_id: string | null
-          paggue_webhook_data: Json | null
+          openpix_charge_id: string | null
           paid_at: string | null
           pix_code: string | null
           qr_code_image: string | null
@@ -147,8 +146,7 @@ export type Database = {
           created_at?: string
           expires_at?: string | null
           id?: string
-          paggue_transaction_id?: string | null
-          paggue_webhook_data?: Json | null
+          openpix_charge_id?: string | null
           paid_at?: string | null
           pix_code?: string | null
           qr_code_image?: string | null
@@ -163,8 +161,7 @@ export type Database = {
           created_at?: string
           expires_at?: string | null
           id?: string
-          paggue_transaction_id?: string | null
-          paggue_webhook_data?: Json | null
+          openpix_charge_id?: string | null
           paid_at?: string | null
           pix_code?: string | null
           qr_code_image?: string | null

@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { Copy, CheckCircle, Clock } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import confetti from "canvas-confetti";
-import AffiliateSignupButton from "./affiliate/AffiliateSignupButton";
+import React, { useState, useEffect } from 'react';
+import { QrCode, Copy, CheckCircle, Clock, DollarSign, Gift } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import confetti from 'canvas-confetti';
+import AffiliateSignupButton from '@/components/affiliate/AffiliateSignupButton';
 
 interface PixPaymentModalProps {
   isOpen: boolean;
@@ -15,47 +17,29 @@ interface PixPaymentModalProps {
   total: number;
 }
 
-interface PaymentData {
-  id: string;
-  qr_code: string;
-  qr_code_image: string;
-  pix_code: string;
-  amount: number;
-  expires_at: string;
-  paggue_transaction_id: string;
-}
-
-export function PixPaymentModal({ isOpen, onClose, onSuccess, selectedNumbers, total }: PixPaymentModalProps) {
-  const [countdown, setCountdown] = useState(900); // 15 minutos
-  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'paid' | 'expired'>('pending');
+const PixPaymentModal = ({ isOpen, onClose, onSuccess, selectedNumbers, total }: PixPaymentModalProps) => {
+  const [countdown, setCountdown] = useState(600); // 10 minutos
+  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'processing' | 'confirmed'>('pending');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
-  const [isCreatingPayment, setIsCreatingPayment] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
-  // Criar pagamento PIX quando modal abrir
-  useEffect(() => {
-    if (isOpen && !paymentData && !isCreatingPayment) {
-      createPixPayment();
-    }
-  }, [isOpen]);
+  // PIX code de demonstração
+  const pixCode = "00020126580014br.gov.bcb.pix0136123e4567-e12b-12d1-a456-426655440000520400005303986540525.005802BR5925PIX DA SORTE DEMONSTRACAO6008SAO PAULO62070503***6304";
 
-  // Countdown timer
   useEffect(() => {
-    if (!isOpen || paymentStatus !== 'pending' || !paymentData) return;
+    if (!isOpen || paymentStatus === 'confirmed') return;
 
     const timer = setInterval(() => {
-      setCountdown((prev) => {
+      setCountdown(prev => {
         if (prev <= 1) {
-          setPaymentStatus('expired');
+          clearInterval(timer);
+          onClose();
           toast({
             title: "Tempo esgotado",
             description: "O tempo para pagamento expirou. Tente novamente.",
             variant: "destructive",
           });
-          setTimeout(() => {
-            onClose();
-          }, 3000);
           return 0;
         }
         return prev - 1;
@@ -63,51 +47,7 @@ export function PixPaymentModal({ isOpen, onClose, onSuccess, selectedNumbers, t
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isOpen, paymentStatus, onClose, toast, paymentData]);
-
-  // Verificação de status do pagamento
-  useEffect(() => {
-    if (!paymentData || paymentStatus !== 'pending') return;
-
-    const checkPaymentStatus = async () => {
-      try {
-        const { data: payment, error } = await supabase
-          .from('pix_payments')
-          .select('status, paid_at')
-          .eq('paggue_transaction_id', paymentData.paggue_transaction_id)
-          .single();
-
-        if (error) {
-          console.error('Erro ao verificar status:', error);
-          return;
-        }
-
-        if (payment.status === 'paid') {
-          setPaymentStatus('paid');
-          triggerConfetti();
-          toast({
-            title: "Pagamento confirmado!",
-            description: "Seus números foram reservados com sucesso!",
-          });
-          
-          setTimeout(() => {
-            onSuccess();
-            onClose();
-            // Reset states
-            setPaymentData(null);
-            setPaymentStatus('pending');
-            setCountdown(900);
-          }, 3000);
-        }
-      } catch (error) {
-        console.error('Erro na verificação de status:', error);
-      }
-    };
-
-    // Verificar status a cada 3 segundos
-    const statusInterval = setInterval(checkPaymentStatus, 3000);
-    return () => clearInterval(statusInterval);
-  }, [paymentData, paymentStatus, onSuccess, onClose, toast]);
+  }, [isOpen, onClose, toast, paymentStatus]);
 
   // Função para trigger do confete
   const triggerConfetti = () => {
@@ -141,210 +81,235 @@ export function PixPaymentModal({ isOpen, onClose, onSuccess, selectedNumbers, t
     }, 250);
   };
 
-  // Criar pagamento PIX real
-  const createPixPayment = async () => {
-    setIsCreatingPayment(true);
-    
-    try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) {
-        throw new Error("Usuário não autenticado");
-      }
-
-      const { data, error } = await supabase.functions.invoke('create-pix-payment', {
-        body: {
-          userId: user.user.id,
-          selectedNumbers,
-          total
-        }
-      });
-
-      console.log('Resposta da edge function:', { data, error });
-
-      if (error) {
-        console.error('Erro ao criar pagamento:', error);
-        throw new Error(`Erro ao criar pagamento PIX: ${error.message || 'Erro desconhecido'}`);
-      }
-
-      if (!data.success) {
-        throw new Error(data.error || "Erro ao criar pagamento PIX");
-      }
-
-      setPaymentData(data.payment);
-      
-      // Calcular countdown baseado na expiração
-      const expiresAt = new Date(data.payment.expires_at);
-      const now = new Date();
-      const timeRemaining = Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000));
-      setCountdown(timeRemaining);
-
+  // Função para processar pagamento demo
+  const handleDemoPayment = async () => {
+    if (!user) {
       toast({
-        title: "PIX gerado com sucesso",
-        description: "Use o QR Code ou código PIX para pagar",
-      });
-
-    } catch (error: any) {
-      console.error('Erro ao criar pagamento PIX:', error);
-      toast({
-        title: "Erro ao gerar PIX",
-        description: error.message || "Tente novamente.",
+        title: "Erro",
+        description: "Usuário não autenticado",
         variant: "destructive",
       });
-      onClose();
-    } finally {
-      setIsCreatingPayment(false);
+      return;
     }
+
+    setIsProcessing(true);
+    setPaymentStatus('processing');
+    
+    toast({
+      title: "Processando pagamento...",
+      description: "Aguarde 5 segundos para confirmação",
+    });
+
+    // Aguardar 5 segundos e processar
+    setTimeout(async () => {
+      try {
+        const { data, error } = await supabase.rpc('reserve_numbers', {
+          p_user_id: user.id,
+          p_numbers: selectedNumbers
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        setPaymentStatus('confirmed');
+        
+        // Trigger confetti
+        triggerConfetti();
+        
+        toast({
+          title: "Pagamento confirmado! 🎉",
+          description: "Seus números foram reservados com sucesso!",
+        });
+
+        // onSuccess(); // Removido para manter o modal aberto
+      } catch (error: any) {
+        console.error('Erro ao reservar números:', error);
+        setPaymentStatus('pending');
+        toast({
+          title: "Erro no pagamento",
+          description: error.message || "Tente novamente",
+          variant: "destructive",
+        });
+      } finally {
+        setIsProcessing(false);
+      }
+    }, 5000);
   };
 
-  // Copy PIX code to clipboard
   const copyPixCode = () => {
-    if (!paymentData) return;
-    
-    navigator.clipboard.writeText(paymentData.pix_code);
+    navigator.clipboard.writeText(pixCode);
     toast({
       title: "Código PIX copiado!",
-      description: "Cole no seu app de pagamentos",
+      description: "Cole o código no seu app de pagamentos",
     });
   };
 
-  // Format time helper
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Reset states when modal closes
-  const handleClose = () => {
-    setPaymentData(null);
-    setPaymentStatus('pending');
-    setCountdown(900);
-    setIsCreatingPayment(false);
-    setIsProcessing(false);
-    onClose();
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-center">
-            {paymentStatus === 'paid' ? 'Pagamento Confirmado!' : 'Pagamento PIX'}
-          </DialogTitle>
-        </DialogHeader>
-
-        {isCreatingPayment ? (
-          <div className="text-center space-y-4 py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="text-muted-foreground">Gerando PIX...</p>
-          </div>
-        ) : paymentStatus === 'paid' ? (
-          <div className="text-center space-y-4">
-            <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
-            <div>
-              <h3 className="text-lg font-semibold text-green-600">
-                Parabéns! Seus números foram reservados!
-              </h3>
-              <p className="text-muted-foreground mt-2">
-                Números escolhidos: {selectedNumbers.join(', ')}
+  if (paymentStatus === 'confirmed') {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center text-2xl font-bold">
+              🎉 Pagamento Confirmado!
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              Seus números foram reservados com sucesso!
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+              <div className="flex items-center gap-2 text-green-700 dark:text-green-300 mb-2">
+                <CheckCircle className="w-5 h-5" />
+                <span className="font-medium">Participação confirmada!</span>
+              </div>
+              <p className="text-sm text-green-600 dark:text-green-400">
+                Você está concorrendo com os números: {selectedNumbers.join(', ')}
               </p>
             </div>
             
-            <div className="bg-primary/10 p-4 rounded-lg">
-              <h4 className="font-semibold mb-2">Que tal se tornar um afiliado?</h4>
-              <p className="text-sm text-muted-foreground mb-3">
-                Indique amigos e ganhe números bônus em cada sorteio!
+            {/* Botão para se tornar afiliado */}
+            <div className="space-y-3">
+              <div className="text-center">
+                <p className="text-sm font-medium text-foreground mb-2">
+                  💰 Quer ganhar números bônus?
+                </p>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Torne-se um afiliado e ganhe números gratuitos para o próximo sorteio a cada indicação que fizer uma compra!
+                </p>
+              </div>
+              <AffiliateSignupButton 
+                onSuccess={(code) => {
+                  toast({
+                    title: "🎉 Agora você é um afiliado!",
+                    description: `Compartilhe seu código ${code} e ganhe números bônus!`,
+                  });
+                }}
+              />
+            </div>
+            
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">
+                Boa sorte no sorteio! 🍀
               </p>
-              <AffiliateSignupButton />
             </div>
           </div>
-        ) : paymentData ? (
-          <div className="space-y-4">
-            {/* Timer */}
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-              <div className="flex items-center gap-2 text-orange-600">
-                <Clock className="w-4 h-4" />
-                <span className="text-sm font-medium">
-                  Tempo restante: {formatTime(countdown)}
-                </span>
-              </div>
-              <p className="text-xs text-orange-500 mt-1">
-                Este PIX expira automaticamente
-              </p>
-            </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
-            {/* Payment Info */}
-            <div className="text-center space-y-2">
-              <h3 className="font-semibold">Total a pagar: R$ {total.toFixed(2)}</h3>
-              <p className="text-sm text-muted-foreground">
-                Números: {selectedNumbers.join(', ')}
-              </p>
-            </div>
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md mx-4 sm:mx-auto max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-center text-lg sm:text-xl">
+            {paymentStatus === 'processing' ? 'Processando Pagamento' : 'Pagamento via PIX'}
+          </DialogTitle>
+        </DialogHeader>
 
-            {/* QR Code */}
-            <div className="flex justify-center">
-              <div className="bg-white p-4 rounded-lg border">
-                <img 
-                  src={paymentData.qr_code_image}
-                  alt="QR Code PIX" 
-                  className="w-48 h-48"
-                  onError={(e) => {
-                    // Fallback se imagem não carregar
-                    e.currentTarget.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
-                  }}
-                />
-              </div>
+        <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
+          {/* Timer */}
+          <div className="text-center">
+            <div className="inline-flex items-center bg-orange-100 text-orange-800 px-3 py-2 rounded-lg">
+              <Clock className="w-4 h-4 mr-2" />
+              <span className="font-mono text-base sm:text-lg">{formatTime(countdown)}</span>
             </div>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-2">
+              Tempo restante para pagamento
+            </p>
+          </div>
 
-            {/* PIX Code */}
+          {/* Resumo do pedido */}
+          <Card className="p-4 bg-muted/50">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Código PIX:</label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={paymentData.pix_code}
-                  readOnly
-                  className="flex-1 p-2 text-xs border rounded bg-gray-50 font-mono"
-                />
-                <Button
+              <div className="flex justify-between">
+                <span>Quantidade:</span>
+                <span className="font-semibold">{selectedNumbers.length} título{selectedNumbers.length > 1 ? 's' : ''}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Valor unitário:</span>
+                <span>R$ 5,00</span>
+              </div>
+              <div className="border-t pt-2 flex justify-between text-lg font-bold">
+                <span>Total:</span>
+                <span className="text-primary">R$ {total.toFixed(2)}</span>
+              </div>
+            </div>
+          </Card>
+
+          {paymentStatus === 'processing' ? (
+            <div className="text-center py-8">
+              <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+              <h3 className="text-lg font-semibold mb-2">Processando pagamento...</h3>
+              <p className="text-muted-foreground">
+                Aguarde enquanto confirmamos sua transação
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* QR Code */}
+              <div className="text-center">
+                <div className="bg-white p-3 sm:p-4 rounded-lg border-2 border-dashed border-muted inline-block">
+                  <QrCode className="w-28 h-28 sm:w-32 sm:h-32 mx-auto text-foreground" />
+                </div>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-2 px-2">
+                  Escaneie o QR Code com seu app de pagamentos
+                </p>
+              </div>
+
+              {/* PIX Code */}
+              <div className="space-y-3">
+                <div className="text-center">
+                  <span className="text-xs sm:text-sm text-muted-foreground">ou copie o código PIX:</span>
+                </div>
+                <div className="bg-muted p-2 sm:p-3 rounded-lg">
+                  <p className="text-xs font-mono break-all text-center leading-relaxed">{pixCode}</p>
+                </div>
+                <Button 
                   onClick={copyPixCode}
-                  variant="outline"
-                  size="sm"
-                  className="shrink-0"
+                  variant="outline" 
+                  className="w-full h-12"
                 >
-                  <Copy className="w-4 h-4" />
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copiar código PIX
                 </Button>
               </div>
-            </div>
 
-            {/* Instructions */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <h4 className="font-semibold text-blue-800 mb-2">Como pagar:</h4>
-              <ol className="text-sm text-blue-700 space-y-1">
-                <li>1. Abra o app do seu banco</li>
-                <li>2. Escaneie o QR Code ou cole o código PIX</li>
-                <li>3. Confirme o pagamento</li>
-                <li>4. Aguarde a confirmação automática</li>
-              </ol>
-            </div>
-
-            {/* Status indicator */}
-            <div className="text-center">
-              <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-                <div className="animate-pulse w-2 h-2 bg-blue-500 rounded-full"></div>
-                Aguardando pagamento...
+              {/* Instruções */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+                <h4 className="font-semibold text-blue-800 mb-2 text-sm sm:text-base">Como pagar:</h4>
+                <ol className="text-xs sm:text-sm text-blue-700 space-y-1">
+                  <li>1. Abra seu app de pagamentos</li>
+                  <li>2. Escolha a opção PIX</li>
+                  <li>3. Escaneie o QR Code ou cole o código</li>
+                  <li>4. Confirme o pagamento</li>
+                </ol>
               </div>
-            </div>
-          </div>
-        ) : (
-          <div className="text-center space-y-4 py-8">
-            <p className="text-muted-foreground">Erro ao carregar dados do pagamento</p>
-            <Button onClick={handleClose} variant="outline">
-              Fechar
+            </>
+          )}
+
+          {/* Botão para simular pagamento (apenas para demonstração) */}
+          {paymentStatus === 'pending' && (
+            <Button 
+              onClick={handleDemoPayment}
+              disabled={isProcessing}
+              className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50"
+            >
+              <DollarSign className="w-4 h-4 mr-2" />
+              {isProcessing ? 'Processando...' : 'Simular Pagamento (Demo)'}
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
 };
+
+export default PixPaymentModal;
