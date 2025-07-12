@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Copy, Share2, Users, Gift, TrendingUp, ExternalLink } from 'lucide-react';
+import AffiliateSignupButton from './AffiliateSignupButton';
 
 interface AffiliateData {
   id: string;
@@ -42,6 +43,7 @@ const AffiliateArea = () => {
   const [referrals, setReferrals] = useState<ReferralData[]>([]);
   const [bonusNumbers, setBonusNumbers] = useState<BonusNumber[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasPurchase, setHasPurchase] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -51,6 +53,17 @@ const AffiliateArea = () => {
 
   const fetchAffiliateData = async () => {
     try {
+      // Verificar se o usuário já fez uma compra primeiro
+      const { data: purchaseData, error: purchaseError } = await supabase
+        .from('raffle_tickets')
+        .select('id')
+        .eq('user_id', user?.id)
+        .eq('payment_status', 'paid')
+        .limit(1);
+
+      if (purchaseError) throw purchaseError;
+      setHasPurchase((purchaseData || []).length > 0);
+
       // Buscar dados do afiliado
       const { data: affiliate, error: affiliateError } = await supabase
         .from('affiliates')
@@ -178,9 +191,17 @@ const AffiliateArea = () => {
             Programa de Afiliados
           </CardTitle>
           <CardDescription>
-            Você ainda não é um afiliado. Para se tornar um afiliado, você precisa fazer uma compra primeiro.
+            {hasPurchase 
+              ? "Parabéns por ter participado de um sorteio! Agora você pode se tornar um afiliado e ganhar números bônus a cada indicação que fizer uma compra."
+              : "Você ainda não é um afiliado. Para se tornar um afiliado, você precisa fazer uma compra primeiro."
+            }
           </CardDescription>
         </CardHeader>
+        {hasPurchase && (
+          <CardContent>
+            <AffiliateSignupButton onSuccess={() => fetchAffiliateData()} />
+          </CardContent>
+        )}
       </Card>
     );
   }
