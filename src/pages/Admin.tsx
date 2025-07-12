@@ -9,6 +9,7 @@ import AdminDashboard from '@/components/admin/AdminDashboard';
 import RaffleManagement from '@/components/admin/RaffleManagement';
 import UserManagement from '@/components/admin/UserManagement';
 import AffiliateManagement from '@/components/admin/AffiliateManagement';
+import { AffiliateTestPanel } from '@/components/admin/AffiliateTestPanel';
 import { Shield } from 'lucide-react';
 
 const Admin = () => {
@@ -92,7 +93,10 @@ const Admin = () => {
               <UserManagement />
             </TabsContent>
             <TabsContent value="affiliates">
-              <AffiliateManagement />
+              <div className="space-y-6">
+                <AffiliateManagement />
+                <AffiliateTestPanel />
+              </div>
             </TabsContent>
           </Tabs>
         </div>

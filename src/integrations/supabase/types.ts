@@ -300,6 +300,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      fix_historical_affiliate_data: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          action_type: string
+          user_id: string
+          affiliate_code: string
+          message: string
+        }[]
+      }
       generate_affiliate_code: {
         Args: Record<PropertyKey, never>
         Returns: string
