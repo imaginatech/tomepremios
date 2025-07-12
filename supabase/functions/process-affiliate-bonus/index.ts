@@ -20,264 +20,350 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
+
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    console.log('=== INÍCIO PROCESSAMENTO BÔNUS AFILIADO ===');
+    
+    const body = await req.json() as WebhookPayload;
+    console.log('Webhook payload recebido:', JSON.stringify(body, null, 2));
 
-    const payload: WebhookPayload = await req.json();
-    console.log('Payload recebido:', payload);
-
-    // Processar apenas quando um ticket é pago
-    if (payload.table === 'raffle_tickets' && 
-        payload.type === 'INSERT' && 
-        payload.record.payment_status === 'paid') {
-      
-      const ticket = payload.record;
-      console.log('Processando ticket pago:', ticket);
-
-      // Verificar se o usuário foi indicado por alguém
-      const { data: profile, error: profileError } = await supabaseClient
-        .from('profiles')
-        .select('referred_by')
-        .eq('id', ticket.user_id)
-        .single();
-
-      if (profileError) {
-        console.error('Erro ao buscar perfil:', profileError);
-        return new Response(JSON.stringify({ error: 'Erro ao buscar perfil' }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      console.log('Perfil encontrado:', profile);
-
-      // Se foi indicado, processar a recompensa
-      if (profile?.referred_by) {
-        console.log('Usuário foi indicado pelo código:', profile.referred_by);
-
-        // Buscar o afiliado
-        const { data: affiliate, error: affiliateError } = await supabaseClient
-          .from('affiliates')
-          .select('id, user_id')
-          .eq('affiliate_code', profile.referred_by)
-          .eq('status', 'active')
-          .single();
-
-        if (affiliateError) {
-          console.error('Erro ao buscar afiliado:', affiliateError);
-          return new Response(JSON.stringify({ error: 'Afiliado não encontrado' }), {
-            status: 404,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-
-        console.log('Afiliado encontrado:', affiliate);
-
-        // Verificar se já existe registro de indicação
-        const { data: existingReferral, error: referralCheckError } = await supabaseClient
-          .from('affiliate_referrals')
-          .select('id, status')
-          .eq('affiliate_id', affiliate.id)
-          .eq('referred_user_id', ticket.user_id)
-          .single();
-
-        if (referralCheckError && referralCheckError.code !== 'PGRST116') {
-          console.error('Erro ao verificar indicação existente:', referralCheckError);
-          return new Response(JSON.stringify({ error: 'Erro ao verificar indicação' }), {
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-
-        console.log('Indicação existente:', existingReferral);
-
-        // Se já existe e está como 'registered', atualizar para 'participant'
-        if (existingReferral && existingReferral.status === 'registered') {
-          const { error: updateError } = await supabaseClient
-            .from('affiliate_referrals')
-            .update({ 
-              status: 'participant',
-              raffle_id: ticket.raffle_id
-            })
-            .eq('id', existingReferral.id);
-
-          if (updateError) {
-            console.error('Erro ao atualizar indicação:', updateError);
-            return new Response(JSON.stringify({ error: 'Erro ao atualizar indicação' }), {
-              status: 500,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-          }
-
-          console.log('Indicação atualizada para participant');
-
-          // Buscar próximo sorteio ativo ou criar um novo
-          const { data: nextRaffle, error: nextRaffleError } = await supabaseClient
-            .from('raffles')
-            .select('id, total_tickets')
-            .eq('status', 'active')
-            .neq('id', ticket.raffle_id)
-            .order('created_at', { ascending: false })
-            .limit(1);
-
-          if (nextRaffleError) {
-            console.error('Erro ao buscar próximo sorteio:', nextRaffleError);
-            return new Response(JSON.stringify({ error: 'Erro ao buscar próximo sorteio' }), {
-              status: 500,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-          }
-
-          let targetRaffleId = null;
-          
-          if (nextRaffle && nextRaffle.length > 0) {
-            targetRaffleId = nextRaffle[0].id;
-          } else {
-            // Se não há próximo sorteio ativo, buscar o mais recente que ainda pode receber números bônus
-            const { data: futureRaffle } = await supabaseClient
-              .from('raffles')
-              .select('id')
-              .gt('draw_date', new Date().toISOString())
-              .order('draw_date', { ascending: true })
-              .limit(1);
-
-            if (futureRaffle && futureRaffle.length > 0) {
-              targetRaffleId = futureRaffle[0].id;
-            }
-          }
-
-          if (targetRaffleId) {
-            // Buscar números disponíveis no sorteio alvo
-            const { data: takenNumbers, error: takenError } = await supabaseClient
-              .from('raffle_tickets')
-              .select('ticket_number')
-              .eq('raffle_id', targetRaffleId);
-
-            if (takenError) {
-              console.error('Erro ao buscar números ocupados:', takenError);
-              return new Response(JSON.stringify({ error: 'Erro ao buscar números ocupados' }), {
-                status: 500,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              });
-            }
-
-            const takenNumbersSet = new Set(takenNumbers?.map(t => t.ticket_number) || []);
-            const availableNumbers = [];
-            
-            // Gerar números disponíveis (assumindo 200 números por sorteio)
-            for (let i = 1; i <= 200; i++) {
-              if (!takenNumbersSet.has(i)) {
-                availableNumbers.push(i);
-              }
-            }
-
-            if (availableNumbers.length > 0) {
-              // Escolher um número aleatório
-              const randomIndex = Math.floor(Math.random() * availableNumbers.length);
-              const bonusNumber = availableNumbers[randomIndex];
-
-              console.log('Número bônus gerado:', bonusNumber);
-
-              // Salvar número bônus
-              const { error: bonusError } = await supabaseClient
-                .from('affiliate_bonus_numbers')
-                .insert({
-                  affiliate_id: affiliate.id,
-                  raffle_id: targetRaffleId,
-                  bonus_numbers: [bonusNumber]
-                });
-
-              if (bonusError) {
-                console.error('Erro ao salvar número bônus:', bonusError);
-                return new Response(JSON.stringify({ error: 'Erro ao salvar número bônus' }), {
-                  status: 500,
-                  headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                });
-              }
-
-              // Reservar o número no sorteio
-              const { error: reserveError } = await supabaseClient
-                .from('raffle_tickets')
-                .insert({
-                  user_id: affiliate.user_id,
-                  raffle_id: targetRaffleId,
-                  ticket_number: bonusNumber,
-                  payment_status: 'bonus'
-                });
-
-              if (reserveError) {
-                console.error('Erro ao reservar número bônus:', reserveError);
-                return new Response(JSON.stringify({ error: 'Erro ao reservar número bônus' }), {
-                  status: 500,
-                  headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                });
-              }
-
-              console.log('Número bônus reservado com sucesso');
-
-              return new Response(JSON.stringify({ 
-                success: true, 
-                message: 'Recompensa processada com sucesso',
-                bonusNumber: bonusNumber
-              }), {
-                status: 200,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              });
-            } else {
-              console.log('Nenhum número disponível no próximo sorteio');
-              return new Response(JSON.stringify({ 
-                success: true, 
-                message: 'Indicação atualizada, mas nenhum número disponível'
-              }), {
-                status: 200,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              });
-            }
-          } else {
-            console.log('Nenhum sorteio futuro encontrado para números bônus');
-            return new Response(JSON.stringify({ 
-              success: true, 
-              message: 'Indicação atualizada, aguardando próximo sorteio'
-            }), {
-              status: 200,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-          }
-        } else {
-          console.log('Indicação não encontrada ou já processada');
-          return new Response(JSON.stringify({ 
-            success: true, 
-            message: 'Nenhuma ação necessária'
-          }), {
-            status: 200,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-      } else {
-        console.log('Usuário não foi indicado por ninguém');
-        return new Response(JSON.stringify({ 
+    // Verificar se é um novo ticket pago
+    if (body.type !== 'INSERT' || body.table !== 'raffle_tickets' || body.record?.payment_status !== 'paid') {
+      console.log('Evento não é um novo ticket pago, ignorando');
+      return new Response(
+        JSON.stringify({ 
           success: true, 
-          message: 'Usuário não foi indicado'
-        }), {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          message: 'Evento não processado - não é um novo ticket pago',
+          details: {
+            type: body.type,
+            table: body.table,
+            payment_status: body.record?.payment_status
+          }
+        }),
+        { 
+          status: 200, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    const ticketData = body.record;
+    console.log('Dados do ticket:', JSON.stringify(ticketData, null, 2));
+
+    // Buscar o perfil do usuário que comprou o ticket
+    console.log(`Buscando perfil do usuário: ${ticketData.user_id}`);
+    const { data: userProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('referred_by')
+      .eq('id', ticketData.user_id)
+      .single();
+
+    if (profileError) {
+      console.error('Erro ao buscar perfil do usuário:', profileError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Erro ao buscar perfil do usuário',
+          details: profileError 
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    console.log('Perfil do usuário encontrado:', JSON.stringify(userProfile, null, 2));
+
+    // Verificar se o usuário foi indicado
+    if (!userProfile?.referred_by) {
+      console.log('Usuário não foi indicado por afiliado, não há bônus a processar');
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Usuário não foi indicado - sem bônus a processar' 
+        }),
+        { 
+          status: 200, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // Buscar informações do afiliado
+    console.log(`Buscando afiliado com código: ${userProfile.referred_by}`);
+    const { data: affiliate, error: affiliateError } = await supabase
+      .from('affiliates')
+      .select('id, user_id, affiliate_code, status')
+      .eq('affiliate_code', userProfile.referred_by)
+      .eq('status', 'active')
+      .single();
+
+    if (affiliateError || !affiliate) {
+      console.error('Erro ao buscar afiliado:', affiliateError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Afiliado não encontrado ou inativo',
+          details: { 
+            affiliate_code: userProfile.referred_by,
+            error: affiliateError 
+          }
+        }),
+        { 
+          status: 404, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    console.log('Afiliado encontrado:', JSON.stringify(affiliate, null, 2));
+
+    // Verificar se já existe uma indicação para este usuário
+    console.log(`Verificando indicação existente para usuário: ${ticketData.user_id}`);
+    const { data: existingReferral, error: referralCheckError } = await supabase
+      .from('affiliate_referrals')
+      .select('id, status, raffle_id')
+      .eq('affiliate_id', affiliate.id)
+      .eq('referred_user_id', ticketData.user_id)
+      .single();
+
+    if (referralCheckError && referralCheckError.code !== 'PGRST116') {
+      console.error('Erro ao verificar indicação existente:', referralCheckError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Erro ao verificar indicação',
+          details: referralCheckError 
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    console.log('Indicação existente encontrada:', JSON.stringify(existingReferral, null, 2));
+
+    // Se já existe indicação e ela já foi processada para este sorteio, ignorar
+    if (existingReferral && existingReferral.status === 'completed' && existingReferral.raffle_id === ticketData.raffle_id) {
+      console.log('Indicação já processada para este sorteio, ignorando');
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Bônus já processado para este sorteio' 
+        }),
+        { 
+          status: 200, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // Atualizar ou criar indicação
+    if (existingReferral) {
+      console.log('Atualizando indicação existente');
+      const { error: updateError } = await supabase
+        .from('affiliate_referrals')
+        .update({
+          status: 'completed',
+          raffle_id: ticketData.raffle_id,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingReferral.id);
+
+      if (updateError) {
+        console.error('Erro ao atualizar indicação:', updateError);
+        throw updateError;
+      }
+    } else {
+      console.log('Criando nova indicação');
+      const { error: insertError } = await supabase
+        .from('affiliate_referrals')
+        .insert({
+          affiliate_id: affiliate.id,
+          referred_user_id: ticketData.user_id,
+          raffle_id: ticketData.raffle_id,
+          status: 'completed'
         });
+
+      if (insertError) {
+        console.error('Erro ao criar indicação:', insertError);
+        throw insertError;
       }
     }
 
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    console.log('Indicação processada com sucesso');
+
+    // Buscar sorteio ativo para gerar número bônus
+    console.log('Buscando sorteio ativo');
+    const { data: activeRaffleId, error: raffleError } = await supabase
+      .rpc('get_active_raffle');
+
+    if (raffleError || !activeRaffleId) {
+      console.error('Erro ao buscar sorteio ativo:', raffleError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Nenhum sorteio ativo encontrado',
+          details: raffleError 
+        }),
+        { 
+          status: 404, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    console.log('Sorteio ativo encontrado:', activeRaffleId);
+
+    // Buscar números já reservados no sorteio ativo
+    console.log('Buscando números já reservados');
+    const { data: reservedTickets, error: ticketsError } = await supabase
+      .from('raffle_tickets')
+      .select('ticket_number')
+      .eq('raffle_id', activeRaffleId)
+      .eq('payment_status', 'paid');
+
+    if (ticketsError) {
+      console.error('Erro ao buscar números reservados:', ticketsError);
+      throw ticketsError;
+    }
+
+    // Buscar números bônus já atribuídos para este afiliado neste sorteio
+    const { data: existingBonusNumbers, error: bonusError } = await supabase
+      .from('affiliate_bonus_numbers')
+      .select('bonus_numbers')
+      .eq('affiliate_id', affiliate.id)
+      .eq('raffle_id', activeRaffleId)
+      .single();
+
+    if (bonusError && bonusError.code !== 'PGRST116') {
+      console.error('Erro ao buscar números bônus existentes:', bonusError);
+      throw bonusError;
+    }
+
+    const reservedNumbers = new Set([
+      ...reservedTickets.map(t => t.ticket_number),
+      ...(existingBonusNumbers?.bonus_numbers || [])
+    ]);
+
+    console.log('Números já reservados:', Array.from(reservedNumbers));
+
+    // Gerar número bônus disponível (1-200)
+    let bonusNumber: number | null = null;
+    for (let i = 1; i <= 200; i++) {
+      if (!reservedNumbers.has(i)) {
+        bonusNumber = i;
+        break;
+      }
+    }
+
+    if (!bonusNumber) {
+      console.log('Todos os números estão ocupados');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Todos os números do sorteio estão ocupados' 
+        }),
+        { 
+          status: 409, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    console.log('Número bônus gerado:', bonusNumber);
+
+    // Salvar número bônus
+    if (existingBonusNumbers) {
+      // Atualizar números bônus existentes
+      const updatedBonusNumbers = [...existingBonusNumbers.bonus_numbers, bonusNumber];
+      const { error: updateBonusError } = await supabase
+        .from('affiliate_bonus_numbers')
+        .update({
+          bonus_numbers: updatedBonusNumbers
+        })
+        .eq('affiliate_id', affiliate.id)
+        .eq('raffle_id', activeRaffleId);
+
+      if (updateBonusError) {
+        console.error('Erro ao atualizar números bônus:', updateBonusError);
+        throw updateBonusError;
+      }
+    } else {
+      // Criar novo registro de números bônus
+      const { error: insertBonusError } = await supabase
+        .from('affiliate_bonus_numbers')
+        .insert({
+          affiliate_id: affiliate.id,
+          raffle_id: activeRaffleId,
+          bonus_numbers: [bonusNumber]
+        });
+
+      if (insertBonusError) {
+        console.error('Erro ao inserir números bônus:', insertBonusError);
+        throw insertBonusError;
+      }
+    }
+
+    // Reservar o número no sorteio
+    console.log('Reservando número bônus no sorteio');
+    const { error: reserveError } = await supabase
+      .from('raffle_tickets')
+      .insert({
+        user_id: affiliate.user_id,
+        raffle_id: activeRaffleId,
+        ticket_number: bonusNumber,
+        payment_status: 'paid'
+      });
+
+    if (reserveError) {
+      console.error('Erro ao reservar número bônus:', reserveError);
+      throw reserveError;
+    }
+
+    console.log('=== BÔNUS PROCESSADO COM SUCESSO ===');
+    console.log(`Afiliado: ${affiliate.affiliate_code}`);
+    console.log(`Número bônus: ${bonusNumber}`);
+    console.log(`Sorteio: ${activeRaffleId}`);
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: 'Bônus de afiliado processado com sucesso',
+        data: {
+          affiliate_code: affiliate.affiliate_code,
+          bonus_number: bonusNumber,
+          raffle_id: activeRaffleId,
+          referred_user_id: ticketData.user_id
+        }
+      }),
+      { 
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
 
   } catch (error) {
-    console.error('Erro geral:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    console.error('=== ERRO NO PROCESSAMENTO ===');
+    console.error('Erro:', error);
+    console.error('Stack:', error.stack);
+    
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: 'Erro interno do servidor',
+        details: error.message 
+      }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
   }
 });
