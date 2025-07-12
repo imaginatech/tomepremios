@@ -73,16 +73,35 @@ serve(async (req) => {
       throw new Error(`Números já vendidos: ${unavailableNumbers.join(', ')}`);
     }
 
+    // Verificar se secrets estão configurados
+    const clientKey = Deno.env.get("PAGGUE_CLIENT_KEY");
+    const clientSecret = Deno.env.get("PAGGUE_CLIENT_SECRET");
+    const companyId = Deno.env.get("PAGGUE_COMPANY_ID");
+    
+    logStep("Verificando secrets", { 
+      hasClientKey: !!clientKey, 
+      hasClientSecret: !!clientSecret,
+      hasCompanyId: !!companyId
+    });
+    
+    if (!clientKey || !clientSecret || !companyId) {
+      throw new Error("Secrets da Paggue não configurados. Verifique PAGGUE_CLIENT_KEY, PAGGUE_CLIENT_SECRET e PAGGUE_COMPANY_ID");
+    }
+
     // Autenticar na API da Paggue
+    const authPayload = {
+      client_key: clientKey,
+      client_secret: clientSecret
+    };
+    
+    logStep("Autenticando na Paggue", { client_key: clientKey });
+    
     const paggueAuthResponse = await fetch('https://ms.paggue.io/auth/v1/token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        client_key: Deno.env.get("PAGGUE_CLIENT_KEY"),
-        client_secret: Deno.env.get("PAGGUE_CLIENT_SECRET")
-      })
+      body: JSON.stringify(authPayload)
     });
 
     if (!paggueAuthResponse.ok) {
@@ -114,7 +133,7 @@ serve(async (req) => {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${accessToken}`,
-        'X-Company-ID': Deno.env.get("PAGGUE_COMPANY_ID") || ""
+        'X-Company-ID': companyId
       },
       body: JSON.stringify(pixPaymentData)
     });
