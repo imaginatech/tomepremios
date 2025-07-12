@@ -28,13 +28,24 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, affil
 
   // Verificar se há código de afiliado na URL ou recebido como prop
   useEffect(() => {
+    console.log('🔗 AuthModal - Verificando código de afiliado:', {
+      propAffiliateCode,
+      currentURL: window.location.href,
+      searchParams: window.location.search
+    });
+
     if (propAffiliateCode) {
+      console.log('✅ AuthModal - Usando código recebido como prop:', propAffiliateCode);
       setAffiliateCode(propAffiliateCode);
     } else {
       const urlParams = new URLSearchParams(window.location.search);
       const refCode = urlParams.get('ref');
+      console.log('🔍 AuthModal - Buscando parâmetro ref na URL:', refCode);
       if (refCode) {
+        console.log('✅ AuthModal - Código encontrado na URL:', refCode);
         setAffiliateCode(refCode);
+      } else {
+        console.log('❌ AuthModal - Nenhum código de afiliado encontrado');
       }
     }
   }, [propAffiliateCode]);
@@ -113,24 +124,52 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, affil
         
         // Se há código de afiliado e cadastro foi bem-sucedido, processar indicação
         if (affiliateCode && result.user) {
+          console.log('🎯 AuthModal - Processando indicação:', {
+            affiliateCode,
+            userId: result.user.id,
+            userEmail: result.user.email
+          });
+
           try {
-            const { error: referralError } = await supabase
+            const { data: referralResult, error: referralError } = await supabase
               .rpc('process_affiliate_referral', {
                 p_referred_user_id: result.user.id,
                 p_affiliate_code: affiliateCode
               });
 
+            console.log('📊 AuthModal - Resultado da indicação:', {
+              success: referralResult,
+              error: referralError
+            });
+
             if (referralError) {
-              console.error('Erro ao processar indicação:', referralError);
-            } else {
+              console.error('❌ AuthModal - Erro ao processar indicação:', referralError);
+              toast({
+                title: "Aviso",
+                description: "Não foi possível registrar a indicação. O código pode ser inválido.",
+                variant: "default",
+              });
+            } else if (referralResult) {
+              console.log('✅ AuthModal - Indicação processada com sucesso!');
               toast({
                 title: "Indicação registrada!",
                 description: "Você foi indicado por um afiliado.",
               });
+            } else {
+              console.log('⚠️ AuthModal - Indicação não foi registrada (retornou false)');
+              toast({
+                title: "Aviso",
+                description: "Código de indicação inválido ou você já foi indicado antes.",
+                variant: "default",
+              });
             }
           } catch (error) {
-            console.error('Erro ao processar indicação:', error);
+            console.error('💥 AuthModal - Erro inesperado ao processar indicação:', error);
           }
+        } else if (affiliateCode && !result.user) {
+          console.log('⚠️ AuthModal - Código de afiliado presente mas usuário não foi criado');
+        } else {
+          console.log('ℹ️ AuthModal - Nenhum código de afiliado para processar');
         }
       }
 
