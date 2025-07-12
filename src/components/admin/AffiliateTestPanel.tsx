@@ -70,13 +70,42 @@ export const AffiliateTestPanel = () => {
         message: `Sorteio ativo: ${activeRaffleId}`
       });
 
-      // 3. Criar ticket de teste
+      // 3. Buscar número disponível e criar ticket de teste
+      const { data: existingTickets } = await supabase
+        .from('raffle_tickets')
+        .select('ticket_number')
+        .eq('raffle_id', activeRaffleId);
+
+      // Encontrar um número disponível (entre 190-200 para teste)
+      let availableNumber = 190;
+      const usedNumbers = existingTickets?.map(t => t.ticket_number) || [];
+      while (usedNumbers.includes(availableNumber) && availableNumber <= 200) {
+        availableNumber++;
+      }
+
+      if (availableNumber > 200) {
+        testResults.push({
+          action: 'Buscar número disponível',
+          success: false,
+          message: 'Todos os números de teste (190-200) estão ocupados'
+        });
+        setResults(testResults);
+        setLoading(false);
+        return;
+      }
+
+      testResults.push({
+        action: 'Buscar número disponível',
+        success: true,
+        message: `Número ${availableNumber} disponível para teste`
+      });
+
       const { data: testTicket, error: ticketError } = await supabase
         .from('raffle_tickets')
         .insert({
           user_id: testUser.id,
           raffle_id: activeRaffleId,
-          ticket_number: 198,
+          ticket_number: availableNumber,
           payment_status: 'pending'
         })
         .select()
