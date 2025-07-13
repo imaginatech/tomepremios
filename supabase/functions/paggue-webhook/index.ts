@@ -37,16 +37,20 @@ serve(async (req) => {
     const webhookData = await req.json();
     logStep("Dados do webhook", webhookData);
 
-    // Verificar se é um evento de pagamento aprovado
-    if (webhookData.event !== 'charge.paid' && webhookData.status !== 'paid') {
-      logStep("Evento ignorado", { event: webhookData.event, status: webhookData.status });
+    // Verificar se é um evento de pagamento aprovado da Paggue
+    // A Paggue envia: { "event": "billing_order.paid", "data": { "hash": "...", "status": 1 } }
+    const eventType = webhookData.event;
+    const eventData = webhookData.data;
+    
+    if (eventType !== 'billing_order.paid' && eventData?.status !== 1) {
+      logStep("Evento ignorado", { event: eventType, status: eventData?.status, fullData: webhookData });
       return new Response(JSON.stringify({ received: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200
       });
     }
 
-    const transactionId = webhookData.id || webhookData.charge?.id;
+    const transactionId = eventData?.hash || webhookData.hash;
     if (!transactionId) {
       throw new Error("ID da transação não encontrado no webhook");
     }
