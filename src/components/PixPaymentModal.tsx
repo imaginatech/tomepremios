@@ -89,25 +89,9 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
         throw new Error(data.error || 'Erro ao criar pagamento');
       }
 
-      // Gerar QR Code a partir do código PIX
-      let qrCodeImage = data.payment.qr_code_image;
-      if (data.payment.pix_code && !qrCodeImage) {
-        try {
-          const qrResponse = await supabase.functions.invoke('generate-qr-code', {
-            body: { pix_code: data.payment.pix_code }
-          });
-          
-          if (qrResponse.data?.success) {
-            qrCodeImage = qrResponse.data.qr_code_url;
-          }
-        } catch (qrError) {
-          console.error('Erro ao gerar QR Code:', qrError);
-        }
-      }
-
       setPixData({
         pix_code: data.payment.pix_code,
-        qr_code_image: qrCodeImage,
+        qr_code_image: data.payment.qr_code_image,
         payment_id: data.payment.id
       });
 
