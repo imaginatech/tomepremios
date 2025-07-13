@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { crypto } from "https://deno.land/std@0.190.0/crypto/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,6 +10,26 @@ const corsHeaders = {
 const logStep = (step: string, details?: any) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
   console.log(`[CREATE-PIX-PAYMENT] ${step}${detailsStr}`);
+};
+
+// Função para criar assinatura SHA256
+const createSignature = async (payload: string, signatureToken: string): Promise<string> => {
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(signatureToken);
+  const messageData = encoder.encode(payload);
+  
+  const key = await crypto.subtle.importKey(
+    'raw',
+    keyData,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  
+  const signature = await crypto.subtle.sign('HMAC', key, messageData);
+  return Array.from(new Uint8Array(signature))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
 };
 
 serve(async (req) => {
@@ -77,15 +98,17 @@ serve(async (req) => {
     const clientKey = Deno.env.get("PAGGUE_CLIENT_KEY");
     const clientSecret = Deno.env.get("PAGGUE_CLIENT_SECRET");
     const companyId = Deno.env.get("PAGGUE_COMPANY_ID");
+    const signatureToken = Deno.env.get("PAGGUE_SIGNATURE_TOKEN");
     
     logStep("Verificando secrets", { 
       hasClientKey: !!clientKey, 
       hasClientSecret: !!clientSecret,
-      hasCompanyId: !!companyId
+      hasCompanyId: !!companyId,
+      hasSignatureToken: !!signatureToken
     });
     
-    if (!clientKey || !clientSecret || !companyId) {
-      throw new Error("Secrets da Paggue não configurados. Verifique PAGGUE_CLIENT_KEY, PAGGUE_CLIENT_SECRET e PAGGUE_COMPANY_ID");
+    if (!clientKey || !clientSecret || !companyId || !signatureToken) {
+      throw new Error("Secrets da Paggue não configurados. Verifique PAGGUE_CLIENT_KEY, PAGGUE_CLIENT_SECRET, PAGGUE_COMPANY_ID e PAGGUE_SIGNATURE_TOKEN");
     }
 
     // Autenticar na API da Paggue
@@ -113,29 +136,35 @@ serve(async (req) => {
     const accessToken = authData.access_token;
     logStep("Autenticado na Paggue com sucesso");
 
-    // Criar cobrança PIX na Paggue
+    // Criar cobrança PIX na Paggue usando a estrutura correta da API
     const pixPaymentData = {
-      amount: Math.round(amount * 100), // Valor em centavos
-      description: `Sorteio - Números: ${selectedNumbers.join(', ')}`,
+      payer_name: user.user_metadata?.full_name || "Cliente",
+      amount: amount, // Valor em reais (não centavos)
       external_id: `raffle_${raffle.id}_${user.id}_${Date.now()}`,
-      payment_methods: ["pix"],
-      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // 10 minutos
-      customer: {
-        name: user.user_metadata?.full_name || "Cliente",
-        email: user.email || ""
+      description: `Sorteio - Números: ${selectedNumbers.join(', ')}`,
+      meta: {
+        user_id: user.id,
+        raffle_id: raffle.id,
+        selected_numbers: selectedNumbers
       }
     };
 
-    logStep("Criando cobrança na Paggue", pixPaymentData);
+    const payloadString = JSON.stringify(pixPaymentData);
+    logStep("Payload para Paggue", pixPaymentData);
 
-    const pagguePaymentResponse = await fetch('https://ms.paggue.io/charges/v1', {
+    // Criar assinatura SHA256
+    const signature = await createSignature(payloadString, signatureToken);
+    logStep("Assinatura criada", { signature: signature.substring(0, 10) + "..." });
+
+    const pagguePaymentResponse = await fetch('https://ms.paggue.io/cashin/api/billing_order', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${accessToken}`,
-        'X-Company-ID': companyId
+        'X-Company-ID': companyId,
+        'Signature': signature
       },
-      body: JSON.stringify(pixPaymentData)
+      body: payloadString
     });
 
     if (!pagguePaymentResponse.ok) {
@@ -144,7 +173,18 @@ serve(async (req) => {
     }
 
     const paymentResult = await pagguePaymentResponse.json();
-    logStep("Cobrança criada na Paggue", { paymentId: paymentResult.id });
+    logStep("Resposta completa da Paggue", paymentResult);
+
+    // Extrair dados da resposta correta da Paggue
+    const pixCode = paymentResult.payment; // O campo 'payment' contém o código PIX
+    const transactionHash = paymentResult.hash; // Hash da transação
+    const paymentStatus = paymentResult.status; // 0 = pending, 1 = paid
+
+    logStep("Dados extraídos", { 
+      pixCode: pixCode ? pixCode.substring(0, 50) + "..." : null,
+      transactionHash,
+      paymentStatus
+    });
 
     // Salvar no banco de dados
     const { data: pixPayment, error: insertError } = await supabase
@@ -154,11 +194,11 @@ serve(async (req) => {
         raffle_id: raffle.id,
         selected_numbers: selectedNumbers,
         amount: amount,
-        paggue_transaction_id: paymentResult.id,
-        pix_code: paymentResult.pix?.code || paymentResult.payment_methods?.pix?.code,
-        qr_code_image: paymentResult.pix?.qr_code_image || paymentResult.payment_methods?.pix?.qr_code_image,
+        paggue_transaction_id: transactionHash,
+        pix_code: pixCode,
+        qr_code_image: null, // A API da Paggue não retorna QR code image diretamente
         status: 'pending',
-        expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString()
+        expires_at: paymentResult.expiration_at || new Date(Date.now() + 10 * 60 * 1000).toISOString()
       })
       .select()
       .single();
