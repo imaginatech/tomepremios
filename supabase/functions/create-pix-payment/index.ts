@@ -137,9 +137,13 @@ serve(async (req) => {
     logStep("Autenticado na Paggue com sucesso");
 
     // Criar cobrança PIX na Paggue usando a estrutura correta da API
+    // Garantir que o valor está em reais (não centavos)
+    const amountInReals = amount / 100; // Converter centavos para reais se necessário
+    logStep("Valor sendo enviado", { originalAmount: amount, amountInReals });
+    
     const pixPaymentData = {
       payer_name: user.user_metadata?.full_name || "Cliente",
-      amount: amount, // Valor em reais (não centavos)
+      amount: amountInReals, // Valor em reais
       external_id: `raffle_${raffle.id}_${user.id}_${Date.now()}`,
       description: `Sorteio - Números: ${selectedNumbers.join(', ')}`,
       meta: {
@@ -193,7 +197,7 @@ serve(async (req) => {
         user_id: user.id,
         raffle_id: raffle.id,
         selected_numbers: selectedNumbers,
-        amount: amount,
+        amount: amountInReals,
         paggue_transaction_id: transactionHash,
         pix_code: pixCode,
         qr_code_image: null, // A API da Paggue não retorna QR code image diretamente
