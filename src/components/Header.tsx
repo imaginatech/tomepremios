@@ -76,9 +76,9 @@ const Header: React.FC<HeaderProps> = ({ affiliateCode }) => {
             {/* Logo */}
             <div className="flex items-center space-x-3 cursor-pointer" onClick={handleHomeClick}>
               <img 
-                src="/lovable-uploads/e1294ca2-05a2-4127-8d2a-152c5031ea6d.png" 
-                alt="PIX da Sorte Logo" 
-                className="h-12 w-auto brightness-0 invert"
+                src="/lovable-uploads/b3c4a522-910c-4501-89cc-c9228e15ab49.png" 
+                alt="Tome prêmios Logo" 
+                className="h-12 w-auto"
               />
             </div>
 

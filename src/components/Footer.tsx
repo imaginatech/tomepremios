@@ -44,7 +44,10 @@ const Footer = () => {
         {/* Copyright */}
         <div className="border-t border-border pt-6 text-center">
           <p className="text-sm text-muted-foreground">
-            © 202 PIX da Sorte. Todos os direitos reservados.
+            © 2025 Tome prêmios. Todos os direitos reservados.
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            CNPJ: 48.749.603/0001-17
           </p>
           <p className="text-xs text-muted-foreground mt-2">
             Plataforma desenvolvida com tecnologia de ponta para sua segurança e conveniência.
