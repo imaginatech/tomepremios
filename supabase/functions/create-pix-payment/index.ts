@@ -139,7 +139,7 @@ serve(async (req) => {
     // Criar cobrança PIX na Paggue usando a estrutura correta da API
     const pixPaymentData = {
       payer_name: user.user_metadata?.full_name || "Cliente",
-      amount: amount, // Valor em reais (não centavos)
+      amount: Math.round(amount * 100), // Converter para centavos (valor inteiro)
       external_id: `raffle_${raffle.id}_${user.id}_${Date.now()}`,
       description: `Sorteio - Números: ${selectedNumbers.join(', ')}`,
       meta: {
