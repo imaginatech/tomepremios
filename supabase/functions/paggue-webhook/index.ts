@@ -11,6 +11,52 @@ const logStep = (step: string, details?: any) => {
   console.log(`[PAGGUE-WEBHOOK] ${step}${detailsStr}`);
 };
 
+// Função para validar signature conforme documentação Paggue
+const validateSignature = async (signature: string, body: any, signingSecret: string): Promise<boolean> => {
+  try {
+    const jsonString = jsonStringifyUnicode(body);
+    logStep("JSON string para validação", { jsonString: jsonString.substring(0, 200) + "..." });
+    
+    // Implementar HMAC SHA256 conforme documentação Paggue
+    const key = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(signingSecret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+    
+    const signatureBytes = await crypto.subtle.sign(
+      'HMAC',
+      key,
+      new TextEncoder().encode(jsonString)
+    );
+    
+    const computedSignature = Array.from(new Uint8Array(signatureBytes))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+    
+    logStep("Validação de signature", { 
+      received: signature.substring(0, 20) + "...",
+      computed: computedSignature.substring(0, 20) + "...",
+      receivedLength: signature.length,
+      computedLength: computedSignature.length
+    });
+    
+    return signature.toLowerCase() === computedSignature.toLowerCase();
+  } catch (error) {
+    logStep("Erro na validação de signature", { error: error.message });
+    return false;
+  }
+};
+
+// Função para stringify com unicode conforme documentação
+const jsonStringifyUnicode = (obj: any): string => {
+  return JSON.stringify(obj).replace(/[\u0080-\uFFFF]/g, function (char) {
+    return "\\u" + ("0000" + char.charCodeAt(0).toString(16)).slice(-4);
+  });
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -18,42 +64,69 @@ serve(async (req) => {
 
   try {
     logStep("Webhook recebido da Paggue");
+    
+    // Log todos os headers para debug
+    const headers: Record<string, string> = {};
+    req.headers.forEach((value, key) => {
+      headers[key] = value;
+    });
+    logStep("Headers recebidos", headers);
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Verificar signature (se necessário)
-    const signature = req.headers.get('X-Paggue-Signature');
+    const webhookData = await req.json();
+    logStep("Dados do webhook completos", webhookData);
+
+    // Verificar signature conforme documentação Paggue
+    const signature = req.headers.get('Signature');
     const signatureToken = Deno.env.get("PAGGUE_SIGNATURE_TOKEN");
     
     if (signatureToken && signature) {
-      // Aqui você pode implementar a verificação da assinatura
-      // Por enquanto vamos apenas logar
-      logStep("Signature recebida", { signature: signature.substring(0, 20) + "..." });
+      logStep("Validando signature da Paggue");
+      const isValid = await validateSignature(signature, webhookData, signatureToken);
+      if (!isValid) {
+        logStep("ERRO: Signature inválida", { signature: signature.substring(0, 20) + "..." });
+        return new Response(JSON.stringify({ error: "Invalid signature" }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401
+        });
+      }
+      logStep("Signature validada com sucesso");
+    } else {
+      logStep("AVISO: Signature não fornecida ou token não configurado");
     }
 
-    const webhookData = await req.json();
-    logStep("Dados do webhook", webhookData);
-
-    // Verificar se é um evento de pagamento aprovado
-    if (webhookData.event !== 'charge.paid' && webhookData.status !== 'paid') {
-      logStep("Evento ignorado", { event: webhookData.event, status: webhookData.status });
-      return new Response(JSON.stringify({ received: true }), {
+    // Verificar se é um pagamento aprovado (status = 1 conforme documentação)
+    if (webhookData.status !== 1) {
+      logStep("Evento ignorado - pagamento não aprovado", { 
+        status: webhookData.status,
+        hash: webhookData.hash,
+        external_id: webhookData.external_id 
+      });
+      return new Response(JSON.stringify({ received: true, ignored: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200
       });
     }
 
-    const transactionId = webhookData.id || webhookData.charge?.id;
+    // Usar hash ou external_id para identificar a transação conforme documentação
+    const transactionId = webhookData.hash || webhookData.external_id;
     if (!transactionId) {
-      throw new Error("ID da transação não encontrado no webhook");
+      throw new Error("Hash ou external_id não encontrado no webhook");
     }
 
-    logStep("Processando pagamento aprovado", { transactionId });
+    logStep("Processando pagamento aprovado", { 
+      transactionId,
+      hash: webhookData.hash,
+      external_id: webhookData.external_id,
+      amount: webhookData.amount,
+      payer_name: webhookData.payer_name
+    });
 
-    // Buscar o pagamento no banco
+    // Buscar o pagamento no banco usando hash como identificador
     const { data: pixPayment, error: paymentError } = await supabase
       .from('pix_payments')
       .select('*')
