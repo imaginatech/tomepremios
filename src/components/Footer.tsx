@@ -50,7 +50,7 @@ const Footer = () => {
             CNPJ: 48.749.603/0001-17
           </p>
           <p className="text-xs text-muted-foreground mt-2">
-            Plataforma desenvolvida com tecnologia de ponta para sua segurança e conveniência.</br>
+            Plataforma desenvolvida com tecnologia de ponta para sua segurança e conveniência.
           </p>
         </div>
       </div>
