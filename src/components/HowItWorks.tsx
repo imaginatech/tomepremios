@@ -74,7 +74,7 @@ const HowItWorks = () => {
           <Card className="p-6 bg-card/50 backdrop-blur-sm">
             <h3 className="text-lg font-semibold mb-3 text-accent">🎯 Como é feito o sorteio?</h3>
             <p className="text-muted-foreground text-sm">
-              Utilizamos a Loteria Federal para garantir total transparência e legitimidade do sorteio.
+              Utilizamos plataforma auditada e totalmente segura para garantir total transparência e legitimidade do sorteio.
             </p>
           </Card>
 
