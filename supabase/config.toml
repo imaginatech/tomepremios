@@ -46,5 +46,11 @@ verify_jwt = false
 [functions.paggue-webhook]
 verify_jwt = false
 
+[functions.weekly-affiliate-payout]
+verify_jwt = false
+
+[functions.get-affiliate-ranking]
+verify_jwt = false
+
 [analytics]
 enabled = false

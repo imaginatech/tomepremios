@@ -26,14 +26,10 @@ interface ReferralData {
   } | null;
 }
 
-interface BonusNumber {
-  id: string;
-  raffle_id: string;
-  bonus_numbers: number[];
-  created_at: string;
-  raffles: {
-    title: string;
-  } | null;
+interface WeeklyStats {
+  current_week_referrals: number;
+  current_rank: number | null;
+  total_referrals: number;
 }
 
 const AffiliateArea = () => {
@@ -41,7 +37,7 @@ const AffiliateArea = () => {
   const { toast } = useToast();
   const [affiliateData, setAffiliateData] = useState<AffiliateData | null>(null);
   const [referrals, setReferrals] = useState<ReferralData[]>([]);
-  const [bonusNumbers, setBonusNumbers] = useState<BonusNumber[]>([]);
+  const [weeklyStats, setWeeklyStats] = useState<WeeklyStats>({ current_week_referrals: 0, current_rank: null, total_referrals: 0 });
   const [loading, setLoading] = useState(true);
   const [hasPurchase, setHasPurchase] = useState(false);
 
@@ -111,20 +107,47 @@ const AffiliateArea = () => {
 
         setReferrals(enrichedReferrals);
 
-        // Buscar números bônus
-        const { data: bonusData, error: bonusError } = await supabase
-          .from('affiliate_bonus_numbers')
-          .select(`
-            *,
-            raffles (
-              title
-            )
-          `)
-          .eq('affiliate_id', affiliate.id)
-          .order('created_at', { ascending: false });
+        // Calcular estatísticas da semana atual
+        const now = new Date();
+        const currentWeekStart = new Date(now);
+        currentWeekStart.setDate(now.getDate() - now.getDay());
+        currentWeekStart.setHours(0, 0, 0, 0);
 
-        if (bonusError) throw bonusError;
-        setBonusNumbers(bonusData || []);
+        const currentWeekReferrals = enrichedReferrals.filter(r => 
+          r.status === 'participant' && 
+          new Date(r.created_at) >= currentWeekStart
+        ).length;
+
+        const totalValidReferrals = enrichedReferrals.filter(r => r.status === 'participant').length;
+
+        // Buscar ranking atual do afiliado
+        const { data: rankingData } = await supabase
+          .from('affiliate_referrals')
+          .select(`
+            affiliate_id,
+            affiliates!inner (affiliate_code)
+          `)
+          .eq('status', 'participant')
+          .gte('week_start', currentWeekStart.toISOString().split('T')[0]);
+
+        // Calcular ranking
+        const affiliateStats: { [key: string]: number } = {};
+        rankingData?.forEach((referral: any) => {
+          const affiliateId = referral.affiliate_id;
+          affiliateStats[affiliateId] = (affiliateStats[affiliateId] || 0) + 1;
+        });
+
+        const sortedAffiliates = Object.entries(affiliateStats)
+          .sort(([,a], [,b]) => b - a)
+          .map(([id], index) => ({ id, rank: index + 1 }));
+
+        const currentRank = sortedAffiliates.find(item => item.id === affiliate.id)?.rank || null;
+
+        setWeeklyStats({
+          current_week_referrals: currentWeekReferrals,
+          current_rank: currentRank,
+          total_referrals: totalValidReferrals
+        });
       }
     } catch (error: any) {
       console.error('Erro ao buscar dados do afiliado:', error);
@@ -192,7 +215,7 @@ const AffiliateArea = () => {
           </CardTitle>
           <CardDescription>
             {hasPurchase 
-              ? "Parabéns por ter participado de um sorteio! Agora você pode se tornar um afiliado e ganhar números bônus a cada indicação que fizer uma compra."
+              ? "Parabéns por ter participado de um sorteio! Agora você pode se tornar um afiliado e competir semanalmente pelo prêmio de R$ 500,00."
               : "Você ainda não é um afiliado. Para se tornar um afiliado, você precisa fazer uma compra primeiro."
             }
           </CardDescription>
@@ -208,7 +231,6 @@ const AffiliateArea = () => {
 
   const participantReferrals = referrals.filter(r => r.status === 'participant').length;
   const registeredReferrals = referrals.filter(r => r.status === 'registered').length;
-  const totalBonusNumbers = bonusNumbers.reduce((acc, bonus) => acc + bonus.bonus_numbers.length, 0);
 
   return (
     <div className="space-y-6">
@@ -230,7 +252,7 @@ const AffiliateArea = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Participantes</p>
+                <p className="text-sm text-muted-foreground">Indicações Válidas</p>
                 <p className="text-2xl font-bold text-green-600">{participantReferrals}</p>
               </div>
               <TrendingUp className="w-8 h-8 text-green-600" />
@@ -242,8 +264,10 @@ const AffiliateArea = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Números Bônus</p>
-                <p className="text-2xl font-bold text-blue-600">{totalBonusNumbers}</p>
+                <p className="text-sm text-muted-foreground">Ranking Semanal</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {weeklyStats.current_rank ? `#${weeklyStats.current_rank}` : '-'}
+                </p>
               </div>
               <Gift className="w-8 h-8 text-blue-600" />
             </div>
@@ -256,7 +280,7 @@ const AffiliateArea = () => {
         <CardHeader>
           <CardTitle>Seu Link de Afiliado</CardTitle>
           <CardDescription>
-            Compartilhe este link para ganhar números bônus a cada nova indicação que fizer uma compra.
+            Compartilhe este link para ganhar pontos no ranking semanal. O 1º lugar ganha R$ 500,00!
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -287,7 +311,7 @@ const AffiliateArea = () => {
         <CardHeader>
           <CardTitle>Suas Indicações</CardTitle>
           <CardDescription>
-            Acompanhe o status das pessoas que se cadastraram com seu link.
+            Acompanhe suas indicações. Você ganha pontos apenas quando o indicado compra um título.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -307,12 +331,12 @@ const AffiliateArea = () => {
                       Indicado em {new Date(referral.created_at).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
-                  <Badge 
-                    variant={referral.status === 'participant' ? 'default' : 'destructive'}
-                    className={referral.status === 'participant' ? 'bg-green-600 hover:bg-green-700' : ''}
-                  >
-                    {referral.status === 'participant' ? 'Participante' : 'Não participante'}
-                  </Badge>
+                   <Badge 
+                     variant={referral.status === 'participant' ? 'default' : 'secondary'}
+                     className={referral.status === 'participant' ? 'bg-green-600 hover:bg-green-700' : ''}
+                   >
+                     {referral.status === 'participant' ? '✓ Comprou' : '⏳ Cadastrado'}
+                   </Badge>
                 </div>
               ))}
             </div>
@@ -320,41 +344,43 @@ const AffiliateArea = () => {
         </CardContent>
       </Card>
 
-      {/* Números Bônus */}
-      {bonusNumbers.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Números Bônus Ganhos</CardTitle>
-            <CardDescription>
-              Números que você ganhou através das suas indicações.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {bonusNumbers.map((bonus) => (
-                <div key={bonus.id} className="p-4 border rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium">{bonus.raffles?.title || 'Sorteio'}</h4>
-                    <Badge variant="outline">
-                      {bonus.bonus_numbers.length} número{bonus.bonus_numbers.length > 1 ? 's' : ''}
-                    </Badge>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {bonus.bonus_numbers.map((number) => (
-                      <Badge key={number} variant="secondary" className="font-mono">
-                        {number.toString().padStart(3, '0')}
-                      </Badge>
-                    ))}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Ganho em {new Date(bonus.created_at).toLocaleDateString('pt-BR')}
-                  </p>
-                </div>
-              ))}
+      {/* Estatísticas Semanais */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Seu Desempenho Semanal</CardTitle>
+          <CardDescription>
+            Acompanhe sua posição na competição semanal pelo prêmio de R$ 500,00.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="text-center p-4 bg-muted/50 rounded-lg">
+              <p className="text-2xl font-bold text-primary">{weeklyStats.current_week_referrals}</p>
+              <p className="text-sm text-muted-foreground">Indicações esta semana</p>
             </div>
-          </CardContent>
-        </Card>
-      )}
+            <div className="text-center p-4 bg-muted/50 rounded-lg">
+              <p className="text-2xl font-bold text-blue-600">
+                {weeklyStats.current_rank ? `#${weeklyStats.current_rank}` : '-'}
+              </p>
+              <p className="text-sm text-muted-foreground">Posição atual</p>
+            </div>
+            <div className="text-center p-4 bg-muted/50 rounded-lg">
+              <p className="text-2xl font-bold text-green-600">{weeklyStats.total_referrals}</p>
+              <p className="text-sm text-muted-foreground">Total de indicações válidas</p>
+            </div>
+          </div>
+          
+          <div className="mt-6 p-4 bg-primary/5 rounded-lg border border-primary/20">
+            <h4 className="font-medium text-primary mb-2">🏆 Prêmio Semanal</h4>
+            <p className="text-sm text-muted-foreground mb-2">
+              O afiliado com mais indicações válidas da semana ganha R$ 500,00 via PIX!
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Premiação automática toda sexta-feira às 20h. A contagem reinicia aos domingos.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

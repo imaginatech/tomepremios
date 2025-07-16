@@ -62,6 +62,7 @@ export type Database = {
           referred_user_id: string
           status: string
           updated_at: string
+          week_start: string | null
         }
         Insert: {
           affiliate_id: string
@@ -71,6 +72,7 @@ export type Database = {
           referred_user_id: string
           status?: string
           updated_at?: string
+          week_start?: string | null
         }
         Update: {
           affiliate_id?: string
@@ -80,6 +82,7 @@ export type Database = {
           referred_user_id?: string
           status?: string
           updated_at?: string
+          week_start?: string | null
         }
         Relationships: [
           {
@@ -294,6 +297,47 @@ export type Database = {
           winning_number?: number | null
         }
         Relationships: []
+      }
+      weekly_affiliate_winners: {
+        Row: {
+          affiliate_id: string
+          created_at: string
+          id: string
+          paid_at: string | null
+          prize_amount: number
+          referrals_count: number
+          week_end: string
+          week_start: string
+        }
+        Insert: {
+          affiliate_id: string
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          prize_amount?: number
+          referrals_count?: number
+          week_end: string
+          week_start: string
+        }
+        Update: {
+          affiliate_id?: string
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          prize_amount?: number
+          referrals_count?: number
+          week_end?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_affiliate_winners_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
