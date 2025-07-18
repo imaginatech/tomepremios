@@ -108,15 +108,10 @@ const Winners = () => {
 
             if (!profileError && userProfile) {
               const winnerName = userProfile.full_name || 'Usuário';
-              // Mascarar o nome (mostrar apenas primeira letra e último sobrenome)
-              const nameParts = winnerName.split(' ');
-              const maskedName = nameParts.length > 1 
-                ? `${nameParts[0].charAt(0)}. ${nameParts[nameParts.length - 1].charAt(0)}.`
-                : `${winnerName.charAt(0)}.`;
 
               winnersData.push({
                 id: raffle.id,
-                name: maskedName,
+                name: winnerName,
                 number: String(raffle.winning_number).padStart(3, '0'),
                 prize: `R$ ${Number(raffle.prize_value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
                 date: raffle.draw_date,
