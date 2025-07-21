@@ -35,6 +35,28 @@ const AffiliateSignupButton = ({ onSuccess }: AffiliateSignupButtonProps) => {
         return;
       }
 
+      // Verificar se o usuário já comprou pelo menos um ticket
+      const { data: tickets, error: ticketsError } = await supabase
+        .from('raffle_tickets')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('payment_status', 'paid')
+        .limit(1);
+
+      if (ticketsError) {
+        console.error('Erro ao verificar tickets:', ticketsError);
+        throw new Error('Erro ao verificar histórico de compras');
+      }
+
+      if (!tickets || tickets.length === 0) {
+        toast({
+          title: "Compre um título primeiro",
+          description: "Para se tornar um afiliado, você precisa comprar pelo menos um título primeiro.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Gerar código de afiliado
       const { data: codeData, error: codeError } = await supabase
         .rpc('generate_affiliate_code');

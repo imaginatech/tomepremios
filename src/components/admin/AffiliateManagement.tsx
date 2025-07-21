@@ -62,7 +62,6 @@ interface BonusNumber {
 interface AffiliateStats {
   totalReferrals: number;
   activeReferrals: number;
-  totalBonusNumbers: number;
   conversionRate: number;
 }
 
@@ -149,21 +148,11 @@ const AffiliateManagement = () => {
       const totalReferrals = referralsData?.length || 0;
       const activeReferrals = referralsData?.filter(r => r.status === 'participant').length || 0;
       
-      // Total de números bônus
-      const { data: bonusData } = await supabase
-        .from('affiliate_bonus_numbers')
-        .select('bonus_numbers')
-        .eq('affiliate_id', affiliateId);
-
-      const totalBonusNumbers = bonusData?.reduce((total, bonus) => 
-        total + (bonus.bonus_numbers?.length || 0), 0) || 0;
-
       const conversionRate = totalReferrals > 0 ? (activeReferrals / totalReferrals) * 100 : 0;
 
       return {
         totalReferrals,
         activeReferrals,
-        totalBonusNumbers,
         conversionRate
       };
     } catch (error) {
@@ -171,7 +160,6 @@ const AffiliateManagement = () => {
       return {
         totalReferrals: 0,
         activeReferrals: 0,
-        totalBonusNumbers: 0,
         conversionRate: 0
       };
     }
@@ -205,31 +193,7 @@ const AffiliateManagement = () => {
         setReferrals([]);
       }
 
-      // Buscar números bônus
-      const { data: bonusData } = await supabase
-        .from('affiliate_bonus_numbers')
-        .select('*')
-        .eq('affiliate_id', affiliate.id)
-        .order('created_at', { ascending: false });
-
-      if (bonusData && bonusData.length > 0) {
-        // Buscar dados dos sorteios
-        const raffleIds = bonusData.map(b => b.raffle_id);
-        const { data: rafflesData } = await supabase
-          .from('raffles')
-          .select('id, title, status')
-          .in('id', raffleIds);
-
-        // Combinar dados de bônus com sorteios
-        const bonusWithRaffles = bonusData.map(bonus => ({
-          ...bonus,
-          raffles: rafflesData?.find(r => r.id === bonus.raffle_id) || null
-        }));
-
-        setBonusNumbers(bonusWithRaffles);
-      } else {
-        setBonusNumbers([]);
-      }
+      setBonusNumbers([]);
       setSelectedAffiliate(affiliate);
       setShowDetails(true);
     } catch (error) {
@@ -359,7 +323,6 @@ const AffiliateManagement = () => {
           const stats = affiliateStats[affiliate.id] || {
             totalReferrals: 0,
             activeReferrals: 0,
-            totalBonusNumbers: 0,
             conversionRate: 0
           };
 
@@ -424,10 +387,6 @@ const AffiliateManagement = () => {
                   <span className="font-semibold text-accent">
                     {stats.conversionRate.toFixed(1)}%
                   </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Números Bônus:</span>
-                  <span className="font-semibold text-purple-600">{stats.totalBonusNumbers}</span>
                 </div>
               </div>
             </Card>
