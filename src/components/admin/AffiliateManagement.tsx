@@ -404,6 +404,10 @@ const AffiliateManagement = () => {
                     <span>{affiliate.profiles.whatsapp}</span>
                   </div>
                 )}
+
+                <div className="flex items-center text-sm text-muted-foreground">
+                  <span>Cadastrado em: {format(new Date(affiliate.created_at), "dd/MM/yyyy", { locale: ptBR })}</span>
+                </div>
               </div>
 
               <div className="mt-4 pt-4 border-t space-y-2">
