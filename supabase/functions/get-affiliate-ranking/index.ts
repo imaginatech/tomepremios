@@ -20,24 +20,32 @@ serve(async (req) => {
   try {
     console.log('=== BUSCAR RANKING SEMANAL ===');
     
-    // Calcular semana atual (domingo a sábado)
+    // Calcular semana atual (segunda a domingo - ISO 8601)
     const now = new Date();
     const currentWeekStart = new Date(now);
-    currentWeekStart.setDate(now.getDate() - now.getDay());
+    
+    // Ajustar para segunda-feira como início da semana
+    const dayOfWeek = now.getDay(); // 0 = domingo, 1 = segunda, etc.
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Se domingo, voltar 6 dias, senão (dia - 1)
+    currentWeekStart.setDate(now.getDate() - daysFromMonday);
     currentWeekStart.setHours(0, 0, 0, 0);
     
     const currentWeekEnd = new Date(currentWeekStart);
     currentWeekEnd.setDate(currentWeekStart.getDate() + 6);
     currentWeekEnd.setHours(23, 59, 59, 999);
 
-    console.log(`Semana atual: ${currentWeekStart.toISOString().split('T')[0]} a ${currentWeekEnd.toISOString().split('T')[0]}`);
+    const weekStartStr = currentWeekStart.toISOString().split('T')[0];
+    const weekEndStr = currentWeekEnd.toISOString().split('T')[0];
+
+    console.log(`Semana atual: ${weekStartStr} a ${weekEndStr}`);
 
     // Buscar indicações válidas da semana atual
     const { data: weeklyReferrals, error } = await supabase
       .from('affiliate_referrals')
       .select('affiliate_id, created_at')
       .eq('status', 'participant')
-      .gte('week_start', currentWeekStart.toISOString().split('T')[0])
+      .gte('week_start', weekStartStr)
+      .lte('week_start', weekEndStr)
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -45,6 +53,8 @@ serve(async (req) => {
       throw error;
     }
 
+    console.log(`Query executada: week_start >= '${weekStartStr}' AND week_start <= '${weekEndStr}'`);
+    console.log(`Indicações encontradas:`, weeklyReferrals);
     console.log(`Encontradas ${weeklyReferrals?.length || 0} indicações válidas na semana`);
 
     // Se não há dados, retornar vazio
