@@ -1,8 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { X, Play, Pause, Volume2, VolumeX, Loader2 } from 'lucide-react';
-import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
+import { X, Play, Pause, Heart } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface StoryVideoModalProps {
   isOpen: boolean;
@@ -19,99 +19,66 @@ const StoryVideoModal: React.FC<StoryVideoModalProps> = ({
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
+  const [showHeart, setShowHeart] = useState(false);
+  const [hearts, setHearts] = useState<{ id: number; x: number; y: number }[]>([]);
 
   useEffect(() => {
-    if (!isOpen || !videoUrl || !videoRef.current) return;
-
-    const video = videoRef.current;
-    setIsLoading(true);
-    setHasError(false);
-    setIsPlaying(false);
-
-    // Reset video
-    video.currentTime = 0;
-    video.muted = true;
-
-    // Timeout de 10 segundos
-    const loadingTimeout = setTimeout(() => {
-      setIsLoading(false);
-      setHasError(true);
-    }, 10000);
-
-    const handleCanPlay = () => {
-      clearTimeout(loadingTimeout);
-      setIsLoading(false);
-      
-      // Tentar autoplay
-      video.play().then(() => {
-        setIsPlaying(true);
-      }).catch(() => {
-        setIsPlaying(false);
-      });
-    };
-
-    const handleError = () => {
-      clearTimeout(loadingTimeout);
-      setIsLoading(false);
-      setHasError(true);
-    };
-
-    video.addEventListener('canplay', handleCanPlay);
-    video.addEventListener('error', handleError);
-    
-    // Definir fonte diretamente
-    video.src = videoUrl;
-    video.load();
-
-    return () => {
-      clearTimeout(loadingTimeout);
-      video.removeEventListener('canplay', handleCanPlay);
-      video.removeEventListener('error', handleError);
-    };
-  }, [isOpen, videoUrl]);
+    if (isOpen && videoRef.current) {
+      videoRef.current.currentTime = 0;
+      videoRef.current.play();
+      setIsPlaying(true);
+    }
+  }, [isOpen]);
 
   const togglePlay = () => {
-    if (videoRef.current && !isLoading && !hasError) {
+    if (videoRef.current) {
       if (isPlaying) {
         videoRef.current.pause();
-        setIsPlaying(false);
       } else {
-        videoRef.current.play().then(() => {
-          setIsPlaying(true);
-        }).catch(() => {
-          setHasError(true);
-        });
+        videoRef.current.play();
       }
+      setIsPlaying(!isPlaying);
     }
   };
 
-  const toggleMute = () => {
-    if (videoRef.current) {
-      const newMutedState = !isMuted;
-      videoRef.current.muted = newMutedState;
-      setIsMuted(newMutedState);
-    }
-  };
-
-  const retryLoad = () => {
-    setHasError(false);
-    setIsLoading(true);
+  const addHeart = (event: React.MouseEvent) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
     
-    if (videoRef.current) {
-      videoRef.current.load();
+    const newHeart = {
+      id: Date.now(),
+      x: x,
+      y: y,
+    };
+    
+    setHearts(prev => [...prev, newHeart]);
+    
+    // Remove heart after animation
+    setTimeout(() => {
+      setHearts(prev => prev.filter(heart => heart.id !== newHeart.id));
+    }, 2000);
+  };
+
+  const handleVideoClick = (event: React.MouseEvent) => {
+    // Double tap to add heart
+    if (event.detail === 2) {
+      addHeart(event);
+      setShowHeart(true);
+      setTimeout(() => setShowHeart(false), 500);
+    } else {
+      // Single tap to toggle play/pause
+      setTimeout(() => {
+        if (event.detail === 1) {
+          togglePlay();
+        }
+      }, 200);
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="p-0 w-full max-w-sm mx-auto h-[80vh] bg-black border-none" onInteractOutside={(e) => e.preventDefault()}>
-        <VisuallyHidden.Root>
-          <DialogTitle>{title}</DialogTitle>
-        </VisuallyHidden.Root>
-        
+      <DialogContent className="p-0 w-full max-w-sm mx-auto h-[80vh] bg-black border-none">
         <div className="relative w-full h-full overflow-hidden rounded-lg">
           {/* Close button */}
           <Button
@@ -133,54 +100,34 @@ const StoryVideoModal: React.FC<StoryVideoModalProps> = ({
           {/* Video */}
           <video
             ref={videoRef}
+            src={videoUrl}
             className="w-full h-full object-cover cursor-pointer"
-            onClick={togglePlay}
+            onClick={handleVideoClick}
             onPlay={() => setIsPlaying(true)}
             onPause={() => setIsPlaying(false)}
             loop
             playsInline
-            muted={isMuted}
-            controls={false}
-            preload="auto"
+            muted={false}
           />
 
-          {/* Loading overlay */}
-          {isLoading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-30">
-              <div className="text-center text-white">
-                <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" />
-                <p className="text-sm">Carregando vídeo...</p>
-              </div>
-            </div>
-          )}
-
-          {/* Error overlay */}
-          {hasError && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-30">
-              <div className="text-center text-white p-4">
-                <div className="text-6xl mb-4">⚠️</div>
-                <p className="text-lg mb-2">Erro ao carregar o vídeo</p>
-                <Button 
-                  onClick={retryLoad}
-                  className="bg-white text-black hover:bg-gray-200"
-                >
-                  Tentar Novamente
-                </Button>
-              </div>
-            </div>
-          )}
-
           {/* Play/Pause overlay */}
-          {!isPlaying && !isLoading && !hasError && (
-            <div 
-              className="absolute inset-0 flex items-center justify-center cursor-pointer z-30"
-              onClick={togglePlay}
-            >
-              <div className="bg-black/50 rounded-full p-4 hover:bg-black/70 transition-colors">
-                <Play className="w-12 h-12 text-white" fill="white" />
+          {!isPlaying && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="bg-black/50 rounded-full p-4">
+                <Play className="w-12 h-12 text-white" />
               </div>
             </div>
           )}
+
+          {/* Heart button */}
+          <Button
+            onClick={addHeart}
+            variant="ghost"
+            size="icon"
+            className="absolute bottom-4 right-4 z-40 bg-black/30 hover:bg-black/50 text-white rounded-full"
+          >
+            <Heart className="w-6 h-6" />
+          </Button>
 
           {/* Controls */}
           <div className="absolute bottom-4 left-4 z-40 flex items-center gap-2">
@@ -189,7 +136,6 @@ const StoryVideoModal: React.FC<StoryVideoModalProps> = ({
               variant="ghost"
               size="icon"
               className="bg-black/30 hover:bg-black/50 text-white rounded-full"
-              disabled={isLoading || hasError}
             >
               {isPlaying ? (
                 <Pause className="w-5 h-5" />
@@ -197,22 +143,43 @@ const StoryVideoModal: React.FC<StoryVideoModalProps> = ({
                 <Play className="w-5 h-5" />
               )}
             </Button>
-            
-            <Button
-              onClick={toggleMute}
-              variant="ghost"
-              size="icon"
-              className="bg-black/30 hover:bg-black/50 text-white rounded-full"
-              disabled={isLoading || hasError}
-            >
-              {isMuted ? (
-                <VolumeX className="w-5 h-5" />
-              ) : (
-                <Volume2 className="w-5 h-5" />
-              )}
-            </Button>
           </div>
+
+          {/* Floating hearts animation */}
+          {hearts.map((heart) => (
+            <div
+              key={heart.id}
+              className="absolute pointer-events-none z-50 animate-pulse"
+              style={{
+                left: heart.x,
+                top: heart.y,
+                animation: 'float-up 2s ease-out forwards',
+              }}
+            >
+              <Heart className="w-8 h-8 text-red-500 fill-red-500" />
+            </div>
+          ))}
+
+          {/* Heart reaction overlay */}
+          {showHeart && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
+              <Heart className="w-20 h-20 text-red-500 fill-red-500 animate-ping" />
+            </div>
+          )}
         </div>
+
+        <style>{`
+          @keyframes float-up {
+            0% {
+              opacity: 1;
+              transform: translateY(0) scale(1);
+            }
+            100% {
+              opacity: 0;
+              transform: translateY(-100px) scale(1.5);
+            }
+          }
+        `}</style>
       </DialogContent>
     </Dialog>
   );
