@@ -112,8 +112,11 @@ const StoryVideoModal: React.FC<StoryVideoModalProps> = ({
 
           {/* Play/Pause overlay */}
           {!isPlaying && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="bg-black/50 rounded-full p-4">
+            <div 
+              className="absolute inset-0 flex items-center justify-center cursor-pointer"
+              onClick={togglePlay}
+            >
+              <div className="bg-black/50 rounded-full p-4 hover:bg-black/70 transition-colors">
                 <Play className="w-12 h-12 text-white" />
               </div>
             </div>

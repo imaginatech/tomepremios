@@ -246,9 +246,9 @@ const Winners = () => {
                     <div className="mt-3 pt-3 border-t">
                       <Button
                         onClick={() => openVideoModal(winner.videoUrl!, winner.videoTitle!)}
-                        variant="outline"
+                        variant="default"
                         size="sm"
-                        className="w-full flex items-center gap-2"
+                        className="w-full flex items-center gap-2 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white shadow-lg"
                       >
                         <Video className="w-4 h-4" />
                         Mensagem do Ganhador
