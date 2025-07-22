@@ -1,7 +1,8 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { X, Play, Pause, Heart } from 'lucide-react';
+import { X, Play, Pause, Heart, Volume2, VolumeX, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Hls from 'hls.js';
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
@@ -21,6 +22,9 @@ const StoryVideoModal: React.FC<StoryVideoModalProps> = ({
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
   const [showHeart, setShowHeart] = useState(false);
   const [hearts, setHearts] = useState<{ id: number; x: number; y: number }[]>([]);
   const [hlsInstance, setHlsInstance] = useState<Hls | null>(null);
@@ -30,78 +34,130 @@ const StoryVideoModal: React.FC<StoryVideoModalProps> = ({
       const video = videoRef.current;
       console.log('🎥 Carregando vídeo:', videoUrl);
       
+      setIsLoading(true);
+      setHasError(false);
+      setIsPlaying(false);
+      
       // Limpar HLS anterior se existir
       if (hlsInstance) {
         hlsInstance.destroy();
         setHlsInstance(null);
       }
       
-      // Aguardar um frame antes de configurar o vídeo
-      const setupVideo = () => {
-        // Check if HLS is supported
-        if (Hls.isSupported()) {
-          console.log('✅ HLS suportado, carregando...');
-          const hls = new Hls({
-            debug: false,
-            enableWorker: false,
-          });
+      const setupVideo = async () => {
+        try {
+          // Configurar vídeo como mutado para permitir autoplay
+          video.muted = true;
+          video.currentTime = 0;
           
-          hls.loadSource(videoUrl);
-          hls.attachMedia(video);
-          setHlsInstance(hls);
-          
-          hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            console.log('📊 Manifest HLS carregado');
-            setTimeout(() => {
+          if (Hls.isSupported()) {
+            console.log('✅ HLS suportado, configurando...');
+            const hls = new Hls({
+              debug: true,
+              enableWorker: false,
+              startLevel: -1,
+              capLevelToPlayerSize: true,
+              maxLoadingDelay: 4,
+              maxBufferLength: 30,
+              maxBufferSize: 60 * 1000 * 1000,
+            });
+            
+            hls.loadSource(videoUrl);
+            hls.attachMedia(video);
+            setHlsInstance(hls);
+            
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+              console.log('📊 Manifest HLS carregado com sucesso');
+              setIsLoading(false);
+              
+              // Tentar iniciar o vídeo automaticamente
               video.play().then(() => {
                 setIsPlaying(true);
-                console.log('▶️ Vídeo iniciado automaticamente');
+                console.log('▶️ Vídeo iniciado automaticamente (mutado)');
               }).catch(error => {
-                console.error('❌ Erro ao iniciar vídeo:', error);
+                console.error('❌ Erro ao iniciar vídeo automaticamente:', error);
                 setIsPlaying(false);
               });
-            }, 100);
-          });
-          
-          hls.on(Hls.Events.ERROR, (event, data) => {
-            console.error('❌ Erro HLS:', data);
-          });
-          
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-          console.log('🍎 Safari - usando HLS nativo');
-          // Native HLS support (Safari)
-          video.src = videoUrl;
-          video.addEventListener('loadedmetadata', () => {
-            console.log('📊 Metadata carregada (Safari)');
-            setTimeout(() => {
+            });
+            
+            hls.on(Hls.Events.ERROR, (event, data) => {
+              console.error('❌ Erro HLS:', event, data);
+              setIsLoading(false);
+              
+              if (data.fatal) {
+                setHasError(true);
+                switch (data.type) {
+                  case Hls.ErrorTypes.NETWORK_ERROR:
+                    console.error('❌ Erro de rede HLS');
+                    // Tentar recuperar
+                    hls.startLoad();
+                    break;
+                  case Hls.ErrorTypes.MEDIA_ERROR:
+                    console.error('❌ Erro de mídia HLS');
+                    hls.recoverMediaError();
+                    break;
+                  default:
+                    console.error('❌ Erro fatal HLS, destruindo...');
+                    hls.destroy();
+                    break;
+                }
+              }
+            });
+            
+            hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+              console.log('🔗 Mídia anexada ao HLS');
+            });
+            
+          } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            console.log('🍎 Safari - usando HLS nativo');
+            video.src = videoUrl;
+            
+            video.addEventListener('loadedmetadata', () => {
+              console.log('📊 Metadata carregada (Safari)');
+              setIsLoading(false);
+              
               video.play().then(() => {
                 setIsPlaying(true);
-                console.log('▶️ Vídeo iniciado automaticamente (Safari)');
+                console.log('▶️ Vídeo iniciado automaticamente (Safari, mutado)');
               }).catch(error => {
                 console.error('❌ Erro ao iniciar vídeo (Safari):', error);
                 setIsPlaying(false);
               });
-            }, 100);
-          });
-        } else {
-          console.error('❌ HLS não suportado neste navegador');
+            });
+            
+            video.addEventListener('error', (error) => {
+              console.error('❌ Erro no vídeo (Safari):', error);
+              setIsLoading(false);
+              setHasError(true);
+            });
+            
+          } else {
+            console.error('❌ HLS não suportado neste navegador');
+            setIsLoading(false);
+            setHasError(true);
+          }
+          
+        } catch (error) {
+          console.error('❌ Erro ao configurar vídeo:', error);
+          setIsLoading(false);
+          setHasError(true);
         }
-        
-        video.currentTime = 0;
       };
 
+      // Aguardar um frame antes de configurar
       requestAnimationFrame(setupVideo);
     }
     
     return () => {
       if (hlsInstance) {
         hlsInstance.destroy();
+        setHlsInstance(null);
       }
     };
   }, [isOpen, videoUrl]);
 
   const togglePlay = () => {
-    if (videoRef.current) {
+    if (videoRef.current && !isLoading && !hasError) {
       console.log('🎬 Toggle play - estado atual:', isPlaying);
       if (isPlaying) {
         videoRef.current.pause();
@@ -111,8 +167,18 @@ const StoryVideoModal: React.FC<StoryVideoModalProps> = ({
           setIsPlaying(true);
         }).catch(error => {
           console.error('❌ Erro ao reproduzir:', error);
+          setHasError(true);
         });
       }
+    }
+  };
+
+  const toggleMute = () => {
+    if (videoRef.current) {
+      const newMutedState = !isMuted;
+      videoRef.current.muted = newMutedState;
+      setIsMuted(newMutedState);
+      console.log('🔊 Áudio', newMutedState ? 'mutado' : 'desmutado');
     }
   };
 
@@ -129,25 +195,49 @@ const StoryVideoModal: React.FC<StoryVideoModalProps> = ({
     
     setHearts(prev => [...prev, newHeart]);
     
-    // Remove heart after animation
     setTimeout(() => {
       setHearts(prev => prev.filter(heart => heart.id !== newHeart.id));
     }, 2000);
   };
 
   const handleVideoClick = (event: React.MouseEvent) => {
-    // Double tap to add heart
+    if (isLoading || hasError) return;
+    
     if (event.detail === 2) {
+      // Double tap para adicionar coração
       addHeart(event);
       setShowHeart(true);
       setTimeout(() => setShowHeart(false), 500);
     } else {
-      // Single tap to toggle play/pause
+      // Single tap para toggle play/pause
       setTimeout(() => {
         if (event.detail === 1) {
           togglePlay();
         }
       }, 200);
+    }
+  };
+
+  const retryLoad = () => {
+    setHasError(false);
+    setIsLoading(true);
+    
+    if (videoRef.current) {
+      // Forçar reload do componente
+      const currentTime = videoRef.current.currentTime;
+      videoRef.current.currentTime = 0;
+      
+      if (hlsInstance) {
+        hlsInstance.destroy();
+        setHlsInstance(null);
+      }
+      
+      // Recriar o setup
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.currentTime = currentTime;
+        }
+      }, 100);
     }
   };
 
@@ -183,14 +273,42 @@ const StoryVideoModal: React.FC<StoryVideoModalProps> = ({
             onClick={handleVideoClick}
             onPlay={() => setIsPlaying(true)}
             onPause={() => setIsPlaying(false)}
+            onLoadStart={() => setIsLoading(true)}
+            onCanPlay={() => setIsLoading(false)}
             loop
             playsInline
-            muted={false}
+            muted={isMuted}
             controls={false}
           />
 
+          {/* Loading overlay */}
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-30">
+              <div className="text-center text-white">
+                <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" />
+                <p className="text-sm">Carregando vídeo...</p>
+              </div>
+            </div>
+          )}
+
+          {/* Error overlay */}
+          {hasError && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-30">
+              <div className="text-center text-white p-4">
+                <div className="text-6xl mb-4">⚠️</div>
+                <p className="text-lg mb-4">Erro ao carregar o vídeo</p>
+                <Button 
+                  onClick={retryLoad}
+                  className="bg-white text-black hover:bg-gray-200"
+                >
+                  Tentar Novamente
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Play/Pause overlay */}
-          {!isPlaying && (
+          {!isPlaying && !isLoading && !hasError && (
             <div 
               className="absolute inset-0 flex items-center justify-center cursor-pointer z-30"
               onClick={togglePlay}
@@ -201,16 +319,6 @@ const StoryVideoModal: React.FC<StoryVideoModalProps> = ({
             </div>
           )}
 
-          {/* Heart button */}
-          <Button
-            onClick={addHeart}
-            variant="ghost"
-            size="icon"
-            className="absolute bottom-4 right-4 z-40 bg-black/30 hover:bg-black/50 text-white rounded-full"
-          >
-            <Heart className="w-6 h-6" />
-          </Button>
-
           {/* Controls */}
           <div className="absolute bottom-4 left-4 z-40 flex items-center gap-2">
             <Button
@@ -218,6 +326,7 @@ const StoryVideoModal: React.FC<StoryVideoModalProps> = ({
               variant="ghost"
               size="icon"
               className="bg-black/30 hover:bg-black/50 text-white rounded-full"
+              disabled={isLoading || hasError}
             >
               {isPlaying ? (
                 <Pause className="w-5 h-5" />
@@ -225,7 +334,32 @@ const StoryVideoModal: React.FC<StoryVideoModalProps> = ({
                 <Play className="w-5 h-5" />
               )}
             </Button>
+            
+            <Button
+              onClick={toggleMute}
+              variant="ghost"
+              size="icon"
+              className="bg-black/30 hover:bg-black/50 text-white rounded-full"
+              disabled={isLoading || hasError}
+            >
+              {isMuted ? (
+                <VolumeX className="w-5 h-5" />
+              ) : (
+                <Volume2 className="w-5 h-5" />
+              )}
+            </Button>
           </div>
+
+          {/* Heart button */}
+          <Button
+            onClick={addHeart}
+            variant="ghost"
+            size="icon"
+            className="absolute bottom-4 right-4 z-40 bg-black/30 hover:bg-black/50 text-white rounded-full"
+            disabled={isLoading || hasError}
+          >
+            <Heart className="w-6 h-6" />
+          </Button>
 
           {/* Floating hearts animation */}
           {hearts.map((heart) => (
