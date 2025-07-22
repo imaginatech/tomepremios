@@ -270,6 +270,8 @@ export type Database = {
           title: string
           total_tickets: number
           updated_at: string
+          winner_video_title: string | null
+          winner_video_url: string | null
           winning_number: number | null
         }
         Insert: {
@@ -286,6 +288,8 @@ export type Database = {
           title: string
           total_tickets?: number
           updated_at?: string
+          winner_video_title?: string | null
+          winner_video_url?: string | null
           winning_number?: number | null
         }
         Update: {
@@ -302,6 +306,8 @@ export type Database = {
           title?: string
           total_tickets?: number
           updated_at?: string
+          winner_video_title?: string | null
+          winner_video_url?: string | null
           winning_number?: number | null
         }
         Relationships: []

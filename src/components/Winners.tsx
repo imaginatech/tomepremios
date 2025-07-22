@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, Calendar, DollarSign, User } from 'lucide-react';
+import { Trophy, Calendar, DollarSign, User, Video } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
+import StoryVideoModal from './StoryVideoModal';
 
 interface Winner {
   id: string;
@@ -11,6 +13,8 @@ interface Winner {
   prize: string;
   date: string;
   edition: string;
+  videoUrl?: string;
+  videoTitle?: string;
 }
 
 interface Stats {
@@ -29,6 +33,8 @@ const Winners = () => {
     totalUsers: 0
   });
   const [loading, setLoading] = useState(true);
+  const [videoModalOpen, setVideoModalOpen] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState<{url: string; title: string} | null>(null);
 
   useEffect(() => {
     fetchWinnersAndStats();
@@ -66,7 +72,7 @@ const Winners = () => {
       // Buscar sorteios concluídos com ganhadores
       const { data: completedRaffles, error: rafflesError } = await supabase
         .from('raffles')
-        .select('*')
+        .select('*, winner_video_url, winner_video_title')
         .eq('status', 'completed')
         .not('winning_number', 'is', null)
         .order('updated_at', { ascending: false })
@@ -115,7 +121,9 @@ const Winners = () => {
                 number: String(raffle.winning_number).padStart(3, '0'),
                 prize: `R$ ${Number(raffle.prize_value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
                 date: raffle.draw_date,
-                edition: `#${String(i + 1).padStart(3, '0')}`
+                edition: `#${String(i + 1).padStart(3, '0')}`,
+                videoUrl: raffle.winner_video_url,
+                videoTitle: raffle.winner_video_title || 'Mensagem do Ganhador'
               });
             } else {
               console.error(`Erro ao buscar perfil para raffle ${raffle.id}:`, profileError);
@@ -164,6 +172,16 @@ const Winners = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const openVideoModal = (videoUrl: string, videoTitle: string) => {
+    setSelectedVideo({ url: videoUrl, title: videoTitle });
+    setVideoModalOpen(true);
+  };
+
+  const closeVideoModal = () => {
+    setVideoModalOpen(false);
+    setSelectedVideo(null);
   };
 
   if (loading) {
@@ -222,6 +240,21 @@ const Winners = () => {
                     <Calendar className="w-4 h-4 mr-2" />
                     <span>{new Date(winner.date).toLocaleDateString('pt-BR')}</span>
                   </div>
+                  
+                  {/* Botão de mensagem do ganhador */}
+                  {winner.videoUrl && (
+                    <div className="mt-3 pt-3 border-t">
+                      <Button
+                        onClick={() => openVideoModal(winner.videoUrl!, winner.videoTitle!)}
+                        variant="outline"
+                        size="sm"
+                        className="w-full flex items-center gap-2"
+                      >
+                        <Video className="w-4 h-4" />
+                        Mensagem do Ganhador
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </Card>
             ))}
@@ -257,6 +290,16 @@ const Winners = () => {
           </Card>
         </div>
       </div>
+
+      {/* Modal de vídeo */}
+      {selectedVideo && (
+        <StoryVideoModal
+          isOpen={videoModalOpen}
+          onClose={closeVideoModal}
+          videoUrl={selectedVideo.url}
+          title={selectedVideo.title}
+        />
+      )}
     </section>
   );
 };

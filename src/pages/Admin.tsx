@@ -9,6 +9,7 @@ import AdminDashboard from '@/components/admin/AdminDashboard';
 import RaffleManagement from '@/components/admin/RaffleManagement';
 import UserManagement from '@/components/admin/UserManagement';
 import AffiliateManagement from '@/components/admin/AffiliateManagement';
+import WinnerManagement from '@/components/admin/WinnerManagement';
 import { AffiliateTestPanel } from '@/components/admin/AffiliateTestPanel';
 import { Shield } from 'lucide-react';
 
@@ -77,10 +78,11 @@ const Admin = () => {
           </div>
 
           <Tabs defaultValue="dashboard" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
               <TabsTrigger value="raffles">Gerenciar Edições</TabsTrigger>
               <TabsTrigger value="users">Usuários</TabsTrigger>
+              <TabsTrigger value="winners">Ganhadores</TabsTrigger>
               <TabsTrigger value="affiliates">Afiliados</TabsTrigger>
             </TabsList>
             <TabsContent value="dashboard">
@@ -91,6 +93,9 @@ const Admin = () => {
             </TabsContent>
             <TabsContent value="users">
               <UserManagement />
+            </TabsContent>
+            <TabsContent value="winners">
+              <WinnerManagement />
             </TabsContent>
             <TabsContent value="affiliates">
               <div className="space-y-6">
