@@ -198,10 +198,10 @@ const AffiliateRanking = () => {
                 
                 {affiliate.rank === 1 && (
                   <div className="text-center">
-                    <Badge variant="default" className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-yellow-900">
+                    <Badge variant="default" className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-black">
                       Líder
                     </Badge>
-                    <p className="text-xs text-yellow-600 font-medium mt-1">
+                    <p className="text-xs text-black font-medium mt-1">
                       R$ 500,00
                     </p>
                   </div>
