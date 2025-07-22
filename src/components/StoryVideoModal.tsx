@@ -1,9 +1,10 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { X, Play, Pause, Heart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Hls from 'hls.js';
+import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
 
 interface StoryVideoModalProps {
   isOpen: boolean;
@@ -22,46 +23,87 @@ const StoryVideoModal: React.FC<StoryVideoModalProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [showHeart, setShowHeart] = useState(false);
   const [hearts, setHearts] = useState<{ id: number; x: number; y: number }[]>([]);
+  const [hlsInstance, setHlsInstance] = useState<Hls | null>(null);
 
   useEffect(() => {
     if (isOpen && videoRef.current && videoUrl) {
       const video = videoRef.current;
+      console.log('🎥 Carregando vídeo:', videoUrl);
+      
+      // Limpar HLS anterior se existir
+      if (hlsInstance) {
+        hlsInstance.destroy();
+        setHlsInstance(null);
+      }
       
       // Check if HLS is supported
       if (Hls.isSupported()) {
-        const hls = new Hls();
-        hls.loadSource(videoUrl);
-        hls.attachMedia(video);
-        
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          video.play();
-          setIsPlaying(true);
+        console.log('✅ HLS suportado, carregando...');
+        const hls = new Hls({
+          debug: false,
+          enableWorker: false,
         });
         
-        return () => {
-          hls.destroy();
-        };
+        hls.loadSource(videoUrl);
+        hls.attachMedia(video);
+        setHlsInstance(hls);
+        
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          console.log('📊 Manifest HLS carregado');
+          video.play().then(() => {
+            setIsPlaying(true);
+            console.log('▶️ Vídeo iniciado automaticamente');
+          }).catch(error => {
+            console.error('❌ Erro ao iniciar vídeo:', error);
+            setIsPlaying(false);
+          });
+        });
+        
+        hls.on(Hls.Events.ERROR, (event, data) => {
+          console.error('❌ Erro HLS:', data);
+        });
+        
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        console.log('🍎 Safari - usando HLS nativo');
         // Native HLS support (Safari)
         video.src = videoUrl;
         video.addEventListener('loadedmetadata', () => {
-          video.play();
-          setIsPlaying(true);
+          console.log('📊 Metadata carregada (Safari)');
+          video.play().then(() => {
+            setIsPlaying(true);
+            console.log('▶️ Vídeo iniciado automaticamente (Safari)');
+          }).catch(error => {
+            console.error('❌ Erro ao iniciar vídeo (Safari):', error);
+            setIsPlaying(false);
+          });
         });
+      } else {
+        console.error('❌ HLS não suportado neste navegador');
       }
       
       video.currentTime = 0;
     }
+    
+    return () => {
+      if (hlsInstance) {
+        hlsInstance.destroy();
+      }
+    };
   }, [isOpen, videoUrl]);
 
   const togglePlay = () => {
     if (videoRef.current) {
+      console.log('🎬 Toggle play - estado atual:', isPlaying);
       if (isPlaying) {
         videoRef.current.pause();
+        setIsPlaying(false);
       } else {
-        videoRef.current.play();
+        videoRef.current.play().then(() => {
+          setIsPlaying(true);
+        }).catch(error => {
+          console.error('❌ Erro ao reproduzir:', error);
+        });
       }
-      setIsPlaying(!isPlaying);
     }
   };
 
@@ -102,7 +144,11 @@ const StoryVideoModal: React.FC<StoryVideoModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="p-0 w-full max-w-sm mx-auto h-[80vh] bg-black border-none">
+      <DialogContent className="p-0 w-full max-w-sm mx-auto h-[80vh] bg-black border-none" onInteractOutside={(e) => e.preventDefault()}>
+        <VisuallyHidden.Root>
+          <DialogTitle>{title}</DialogTitle>
+        </VisuallyHidden.Root>
+        
         <div className="relative w-full h-full overflow-hidden rounded-lg">
           {/* Close button */}
           <Button
@@ -131,14 +177,17 @@ const StoryVideoModal: React.FC<StoryVideoModalProps> = ({
             loop
             playsInline
             muted={false}
-            autoPlay
+            controls={false}
           />
 
           {/* Play/Pause overlay */}
           {!isPlaying && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="bg-black/50 rounded-full p-4">
-                <Play className="w-12 h-12 text-white" />
+            <div 
+              className="absolute inset-0 flex items-center justify-center cursor-pointer z-30"
+              onClick={togglePlay}
+            >
+              <div className="bg-black/50 rounded-full p-4 hover:bg-black/70 transition-colors">
+                <Play className="w-12 h-12 text-white" fill="white" />
               </div>
             </div>
           )}
