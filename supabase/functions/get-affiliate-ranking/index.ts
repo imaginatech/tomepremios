@@ -19,25 +19,13 @@ serve(async (req) => {
   );
 
   try {
-    console.log('=== BUSCAR RANKING SEMANAL - SIMPLIFICADO ===');
+    console.log('=== BUSCAR TOP 10 AFILIADOS - SEM FILTROS ===');
     
-    // Buscar dos últimos 7 dias para simplificar
-    const now = new Date();
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(now.getDate() - 7);
-    
-    const sevenDaysAgoStr = sevenDaysAgo.toISOString();
-    const nowStr = now.toISOString();
-
-    console.log(`Buscando referrals participant desde: ${sevenDaysAgoStr}`);
-    console.log(`Até: ${nowStr}`);
-
-    // Buscar por status 'participant' usando apenas created_at
-    const { data: weeklyReferrals, error } = await supabase
+    // Buscar TODAS as indicações com status 'participant' - sem filtro de data
+    const { data: allReferrals, error } = await supabase
       .from('affiliate_referrals')
       .select('affiliate_id, created_at')
       .eq('status', 'participant')
-      .gte('created_at', sevenDaysAgoStr)
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -45,39 +33,36 @@ serve(async (req) => {
       throw error;
     }
 
-    console.log(`Query executada com filtros:`);
-    console.log(`- Status: participant`);
-    console.log(`- Created_at >= '${sevenDaysAgoStr}'`);
-    console.log(`Indicações encontradas:`, weeklyReferrals);
-    console.log(`Total de indicações: ${weeklyReferrals?.length || 0}`);
+    console.log(`Query executada:`);
+    console.log(`- Status: participant (SEM FILTROS DE DATA)`);
+    console.log(`Indicações encontradas:`, allReferrals);
+    console.log(`Total de indicações: ${allReferrals?.length || 0}`);
 
     // Se não há dados, retornar vazio
-    if (!weeklyReferrals || weeklyReferrals.length === 0) {
+    if (!allReferrals || allReferrals.length === 0) {
       console.log('Nenhuma indicação participant encontrada - retornando lista vazia');
       
-      // Vamos fazer uma consulta adicional para debug
-      const { data: allReferrals } = await supabase
+      // Debug - buscar todas as indicações para ver o que existe
+      const { data: debugReferrals } = await supabase
         .from('affiliate_referrals')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(10);
       
-      console.log('DEBUG - Últimas 10 indicações na base:', allReferrals);
+      console.log('DEBUG - Últimas 10 indicações na base:', debugReferrals);
       
       return new Response(
         JSON.stringify({
           success: true,
           data: {
             rankings: [],
-            week_start: sevenDaysAgo.toISOString().split('T')[0],
-            week_end: now.toISOString().split('T')[0],
             total_affiliates: 0,
             debug: {
               query_filters: {
                 status: 'participant',
-                created_at_filter: `created_at >= '${sevenDaysAgoStr}'`
+                filter: 'SEM FILTROS DE DATA'
               },
-              all_referrals_sample: allReferrals?.slice(0, 3) || []
+              all_referrals_sample: debugReferrals?.slice(0, 3) || []
             }
           }
         }),
@@ -89,7 +74,7 @@ serve(async (req) => {
     }
 
     // Buscar dados dos afiliados
-    const affiliateIds = [...new Set(weeklyReferrals.map((r: any) => r.affiliate_id))];
+    const affiliateIds = [...new Set(allReferrals.map((r: any) => r.affiliate_id))];
     console.log('IDs dos afiliados encontrados:', affiliateIds);
 
     const { data: affiliatesData, error: affiliatesError } = await supabase
@@ -120,7 +105,7 @@ serve(async (req) => {
     // Agrupar e contar indicações por afiliado
     const affiliateStats: { [key: string]: any } = {};
 
-    weeklyReferrals.forEach((referral: any) => {
+    allReferrals.forEach((referral: any) => {
       const affiliateId = referral.affiliate_id;
       const affiliateInfo = affiliatesData?.find((a: any) => a.id === affiliateId);
       
@@ -175,8 +160,6 @@ serve(async (req) => {
         success: true,
         data: {
           rankings: sortedRankings,
-          week_start: sevenDaysAgo.toISOString().split('T')[0],
-          week_end: now.toISOString().split('T')[0],
           total_affiliates: sortedRankings.length
         }
       }),
