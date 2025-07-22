@@ -42,13 +42,13 @@ serve(async (req) => {
     console.log(`Data atual: ${now.toISOString()}`);
     console.log(`Dia da semana atual: ${dayOfWeek} (0=domingo, 1=segunda)`);
 
-    // CORREÇÃO PRINCIPAL: Buscar por status 'participant' E verificar se week_start está na semana atual
-    // OU se created_at está na semana atual para casos onde week_start não foi definido
+    // Buscar por status 'participant' usando apenas created_at para determinar semana atual
     const { data: weeklyReferrals, error } = await supabase
       .from('affiliate_referrals')
-      .select('affiliate_id, created_at, week_start')
+      .select('affiliate_id, created_at')
       .eq('status', 'participant')
-      .or(`week_start.eq.${weekStartStr},and(week_start.is.null,created_at.gte.${weekStartStr}T00:00:00,created_at.lte.${weekEndStr}T23:59:59)`)
+      .gte('created_at', `${weekStartStr}T00:00:00`)
+      .lte('created_at', `${weekEndStr}T23:59:59`)
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -58,7 +58,7 @@ serve(async (req) => {
 
     console.log(`Query executada com filtros:`);
     console.log(`- Status: participant`);
-    console.log(`- Week_start = '${weekStartStr}' OU (week_start IS NULL E created_at entre '${weekStartStr}' e '${weekEndStr}')`);
+    console.log(`- Created_at entre '${weekStartStr}T00:00:00' e '${weekEndStr}T23:59:59'`);
     console.log(`Indicações encontradas:`, weeklyReferrals);
     console.log(`Total de indicações: ${weeklyReferrals?.length || 0}`);
 
@@ -86,7 +86,7 @@ serve(async (req) => {
             debug: {
               query_filters: {
                 status: 'participant',
-                week_filter: `week_start='${weekStartStr}' OR (week_start IS NULL AND created_at BETWEEN '${weekStartStr}' AND '${weekEndStr}')`
+                created_at_filter: `created_at BETWEEN '${weekStartStr}T00:00:00' AND '${weekEndStr}T23:59:59'`
               },
               all_referrals_sample: allReferrals?.slice(0, 3) || []
             }
