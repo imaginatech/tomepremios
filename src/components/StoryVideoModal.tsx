@@ -3,6 +3,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { X, Play, Pause, Heart } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import Hls from 'hls.js';
 
 interface StoryVideoModalProps {
   isOpen: boolean;
@@ -23,12 +24,35 @@ const StoryVideoModal: React.FC<StoryVideoModalProps> = ({
   const [hearts, setHearts] = useState<{ id: number; x: number; y: number }[]>([]);
 
   useEffect(() => {
-    if (isOpen && videoRef.current) {
-      videoRef.current.currentTime = 0;
-      videoRef.current.play();
-      setIsPlaying(true);
+    if (isOpen && videoRef.current && videoUrl) {
+      const video = videoRef.current;
+      
+      // Check if HLS is supported
+      if (Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(videoUrl);
+        hls.attachMedia(video);
+        
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          video.play();
+          setIsPlaying(true);
+        });
+        
+        return () => {
+          hls.destroy();
+        };
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        // Native HLS support (Safari)
+        video.src = videoUrl;
+        video.addEventListener('loadedmetadata', () => {
+          video.play();
+          setIsPlaying(true);
+        });
+      }
+      
+      video.currentTime = 0;
     }
-  }, [isOpen]);
+  }, [isOpen, videoUrl]);
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -100,7 +124,6 @@ const StoryVideoModal: React.FC<StoryVideoModalProps> = ({
           {/* Video */}
           <video
             ref={videoRef}
-            src={videoUrl}
             className="w-full h-full object-cover cursor-pointer"
             onClick={handleVideoClick}
             onPlay={() => setIsPlaying(true)}
@@ -108,6 +131,7 @@ const StoryVideoModal: React.FC<StoryVideoModalProps> = ({
             loop
             playsInline
             muted={false}
+            autoPlay
           />
 
           {/* Play/Pause overlay */}
