@@ -8,7 +8,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, fullName?: string, whatsapp?: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, fullName?: string, whatsapp?: string, affiliateCode?: string) => Promise<{ data: any; error: any }>;
   signOut: () => Promise<void>;
 }
 
@@ -48,25 +48,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { error };
   };
 
-  const signUp = async (email: string, password: string, fullName?: string, whatsapp?: string) => {
+  const signUp = async (email: string, password: string, fullName?: string, whatsapp?: string, affiliateCode?: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
-    console.log('Signing up with data:', { email, fullName, whatsapp });
+    console.log('Signing up with data:', { email, fullName, whatsapp, affiliateCode });
     
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: redirectUrl,
         data: {
           full_name: fullName,
-          whatsapp: whatsapp
+          whatsapp: whatsapp,
+          referred_by: affiliateCode?.trim().toUpperCase()
         }
       }
     });
     
-    console.log('SignUp result:', { error });
-    return { error };
+    console.log('SignUp result:', { data, error });
+    return { data, error };
   };
 
   const signOut = async () => {
