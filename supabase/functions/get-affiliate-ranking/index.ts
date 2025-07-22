@@ -15,56 +15,75 @@ serve(async (req) => {
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    Denv.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
   );
 
   try {
-    console.log('=== BUSCAR TOP 10 AFILIADOS - QUERY DIRETA ===');
+    console.log('=== BUSCAR TOP 10 AFILIADOS COM SERVICE ROLE ===');
     
-    // Usar exatamente a query que funciona manualmente
+    // Usar query SQL direta que sabemos que funciona
     const { data: rankingData, error: rankingError } = await supabase
-      .from('affiliate_referrals')
-      .select(`
-        affiliate_id,
-        affiliates!inner (
-          affiliate_code,
-          user_id,
-          profiles!inner (
-            full_name
-          )
-        )
-      `)
-      .eq('status', 'participant');
+      .rpc('get_affiliate_rankings');
 
     if (rankingError) {
-      console.error('Erro na query principal:', rankingError);
-      throw rankingError;
-    }
-
-    console.log('Dados brutos da query:', rankingData);
-    console.log(`Total de registros encontrados: ${rankingData?.length || 0}`);
-
-    if (!rankingData || rankingData.length === 0) {
-      console.log('Nenhuma indicação participant encontrada');
+      console.error('Erro na RPC function:', rankingError);
       
-      // Debug - buscar todas as indicações para diagnosticar
-      const { data: debugData } = await supabase
+      // Fallback: tentar query manual
+      const { data: fallbackData, error: fallbackError } = await supabase
         .from('affiliate_referrals')
-        .select('*')
-        .limit(10);
+        .select(`
+          affiliate_id,
+          affiliates!inner (
+            affiliate_code,
+            profiles!inner (
+              full_name
+            )
+          )
+        `)
+        .eq('status', 'participant');
+
+      if (fallbackError) {
+        console.error('Erro no fallback:', fallbackError);
+        throw fallbackError;
+      }
+
+      console.log('Usando fallback, dados:', fallbackData);
       
-      console.log('DEBUG - Todas as indicações:', debugData);
+      // Processar dados do fallback
+      const affiliateStats: { [key: string]: any } = {};
       
+      (fallbackData || []).forEach((record: any) => {
+        const affiliateId = record.affiliate_id;
+        const affiliate = record.affiliates;
+        
+        if (affiliate && affiliate.profiles) {
+          if (!affiliateStats[affiliateId]) {
+            affiliateStats[affiliateId] = {
+              affiliate_id: affiliateId,
+              affiliate_code: affiliate.affiliate_code,
+              user_name: affiliate.profiles.full_name,
+              referrals_count: 0
+            };
+          }
+          affiliateStats[affiliateId].referrals_count++;
+        }
+      });
+
+      const sortedRankings = Object.values(affiliateStats)
+        .sort((a: any, b: any) => b.referrals_count - a.referrals_count)
+        .slice(0, 10)
+        .map((item: any, index) => ({
+          ...item,
+          rank: index + 1
+        }));
+
       return new Response(
         JSON.stringify({
           success: true,
           data: {
-            rankings: [],
-            total_affiliates: 0,
-            debug: {
-              message: 'Nenhuma indicação participant encontrada',
-              all_referrals: debugData || []
-            }
+            rankings: sortedRankings,
+            total_affiliates: sortedRankings.length,
+            source: 'fallback'
           }
         }),
         { 
@@ -74,56 +93,24 @@ serve(async (req) => {
       );
     }
 
-    // Agrupar por afiliado e contar indicações
-    const affiliateStats: { [key: string]: any } = {};
-    
-    rankingData.forEach((record: any) => {
-      const affiliateId = record.affiliate_id;
-      const affiliate = record.affiliates;
-      
-      if (!affiliate) {
-        console.warn(`Afiliado não encontrado para ID: ${affiliateId}`);
-        return;
-      }
+    console.log('Dados da RPC:', rankingData);
 
-      const profile = affiliate.profiles;
-      if (!profile) {
-        console.warn(`Profile não encontrado para afiliado: ${affiliateId}`);
-        return;
-      }
-
-      if (!affiliateStats[affiliateId]) {
-        affiliateStats[affiliateId] = {
-          affiliate_id: affiliateId,
-          affiliate_code: affiliate.affiliate_code,
-          user_name: profile.full_name,
-          referrals_count: 0,
-          rank: 0
-        };
-      }
-      
-      affiliateStats[affiliateId].referrals_count++;
-    });
-
-    console.log('Estatísticas processadas:', affiliateStats);
-
-    // Converter para array e ordenar por quantidade de indicações
-    const sortedRankings = Object.values(affiliateStats)
-      .sort((a: any, b: any) => b.referrals_count - a.referrals_count)
-      .slice(0, 10) // Top 10
-      .map((item: any, index) => ({
-        ...item,
-        rank: index + 1
-      }));
-
-    console.log('Rankings finais ordenados:', sortedRankings);
+    // Processar dados da RPC
+    const processedRankings = (rankingData || []).map((item: any, index: number) => ({
+      affiliate_id: item.affiliate_id,
+      affiliate_code: item.affiliate_code,
+      user_name: item.full_name,
+      referrals_count: item.referrals_count,
+      rank: index + 1
+    }));
 
     return new Response(
       JSON.stringify({
         success: true,
         data: {
-          rankings: sortedRankings,
-          total_affiliates: sortedRankings.length
+          rankings: processedRankings,
+          total_affiliates: processedRankings.length,
+          source: 'rpc'
         }
       }),
       { 
@@ -135,7 +122,6 @@ serve(async (req) => {
   } catch (error) {
     console.error('=== ERRO CRÍTICO NO RANKING ===');
     console.error('Erro completo:', error);
-    console.error('Stack trace:', error.stack);
     
     return new Response(
       JSON.stringify({ 
