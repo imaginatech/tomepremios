@@ -121,58 +121,31 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, affil
       if (isLogin) {
         result = await signIn(email, password);
       } else {
-        result = await signUp(email, password, fullName, whatsapp);
+        // Incluir código de afiliado diretamente no cadastro
+        result = await signUp(email, password, fullName, whatsapp, affiliateCode);
         
-        // Se há código de afiliado e cadastro foi bem-sucedido, atualizar o profile
+        // Log do resultado para debug
+        console.log('🎯 AuthModal - Resultado do cadastro:', {
+          success: !result.error,
+          hasAffiliateCode: !!affiliateCode,
+          affiliateCode: affiliateCode?.trim().toUpperCase(),
+          userEmail: email,
+          userData: result.data?.user
+        });
+
         if (affiliateCode && !result.error) {
-          console.log('🎯 AuthModal - Processando indicação com código:', {
-            affiliateCode: affiliateCode.trim().toUpperCase(),
-            userEmail: email
+          console.log('✅ AuthModal - Cadastro realizado com código de afiliado!');
+          toast({
+            title: "Indicação registrada!",
+            description: "Você foi indicado por um afiliado e receberá benefícios especiais.",
           });
-
-          try {
-            // Aguardar um momento para garantir que o profile foi criado
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            // Atualizar o profile diretamente com o código de afiliado
-            const { error: updateError } = await supabase
-              .from('profiles')
-              .update({ referred_by: affiliateCode.trim().toUpperCase() })
-              .eq('id', result.data?.user?.id);
-
-            if (updateError) {
-              console.error('❌ AuthModal - Erro ao atualizar profile:', updateError);
-              toast({
-                title: "Aviso",
-                description: "Erro ao registrar código de indicação.",
-                variant: "destructive",
-              });
-            } else {
-              console.log('✅ AuthModal - Profile atualizado com código de afiliado!');
-              toast({
-                title: "Indicação registrada!",
-                description: "Você foi indicado por um afiliado e receberá benefícios especiais.",
-              });
-            }
-          } catch (error) {
-            console.error('💥 AuthModal - Erro inesperado ao processar indicação:', error);
-            toast({
-              title: "Erro",
-              description: "Erro inesperado ao processar indicação.",
-              variant: "destructive",
-            });
-          }
         } else if (affiliateCode && result.error) {
           console.log('⚠️ AuthModal - Código de afiliado presente mas cadastro falhou', {
             affiliateCode,
             error: result.error
           });
-        } else {
-          console.log('ℹ️ AuthModal - Nenhum código de afiliado para processar', {
-            hasAffiliateCode: !!affiliateCode,
-            hasError: !!result.error,
-            affiliateCode
-          });
+        } else if (!affiliateCode) {
+          console.log('ℹ️ AuthModal - Cadastro realizado sem código de afiliado');
         }
       }
 
