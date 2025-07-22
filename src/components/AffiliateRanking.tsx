@@ -176,7 +176,7 @@ const AffiliateRanking = () => {
                 </div>
                 
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">
+                  <p className="font-medium truncate text-foreground">
                     {affiliate.user_name || 'Afiliado'}
                   </p>
                   <p className="text-sm text-muted-foreground font-mono">
