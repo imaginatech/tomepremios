@@ -18,8 +18,10 @@ const StoryVideoModal: React.FC<StoryVideoModalProps> = ({
   title = "Mensagem do Ganhador"
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const heartButtonRef = useRef<HTMLButtonElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showHeart, setShowHeart] = useState(false);
+  const [isHeartActive, setIsHeartActive] = useState(false);
   const [hearts, setHearts] = useState<{ id: number; x: number; y: number }[]>([]);
 
   useEffect(() => {
@@ -41,10 +43,19 @@ const StoryVideoModal: React.FC<StoryVideoModalProps> = ({
     }
   };
 
-  const addHeart = (event: React.MouseEvent) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
+  const addHeart = (event?: React.MouseEvent) => {
+    let x = 0;
+    let y = 0;
+    
+    // Se foi clicado no botão, usar a posição do botão
+    if (heartButtonRef.current) {
+      const rect = heartButtonRef.current.getBoundingClientRect();
+      const containerRect = heartButtonRef.current.closest('.relative')?.getBoundingClientRect();
+      if (containerRect) {
+        x = rect.left - containerRect.left + rect.width / 2;
+        y = rect.top - containerRect.top + rect.height / 2;
+      }
+    }
     
     const newHeart = {
       id: Date.now(),
@@ -53,6 +64,7 @@ const StoryVideoModal: React.FC<StoryVideoModalProps> = ({
     };
     
     setHearts(prev => [...prev, newHeart]);
+    setIsHeartActive(true);
     
     // Remove heart after animation
     setTimeout(() => {
@@ -124,12 +136,16 @@ const StoryVideoModal: React.FC<StoryVideoModalProps> = ({
 
           {/* Heart button */}
           <Button
+            ref={heartButtonRef}
             onClick={addHeart}
             variant="ghost"
             size="icon"
-            className="absolute bottom-4 right-4 z-40 bg-black/30 hover:bg-black/50 text-white rounded-full"
+            className={cn(
+              "absolute bottom-4 right-4 z-40 bg-black/30 hover:bg-black/50 rounded-full transition-colors",
+              isHeartActive ? "text-red-500" : "text-white"
+            )}
           >
-            <Heart className="w-6 h-6" />
+            <Heart className={cn("w-6 h-6", isHeartActive && "fill-red-500")} />
           </Button>
 
           {/* Controls */}
