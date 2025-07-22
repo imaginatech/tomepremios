@@ -23,70 +23,34 @@ const AffiliateRanking = () => {
 
   const fetchWeeklyRanking = async () => {
     try {
-      // Calcular início e fim da semana atual
-      const now = new Date();
-      const currentWeekStart = new Date(now);
-      currentWeekStart.setDate(now.getDate() - now.getDay());
-      currentWeekStart.setHours(0, 0, 0, 0);
+      console.log('Chamando edge function get-affiliate-ranking...');
       
-      const currentWeekEnd = new Date(currentWeekStart);
-      currentWeekEnd.setDate(currentWeekStart.getDate() + 6);
-      currentWeekEnd.setHours(23, 59, 59, 999);
+      // Chamar a edge function que já faz todo o processamento
+      const { data, error } = await supabase.functions.invoke('get-affiliate-ranking');
 
-      setWeekPeriod(`${currentWeekStart.toLocaleDateString('pt-BR')} - ${currentWeekEnd.toLocaleDateString('pt-BR')}`);
+      if (error) {
+        console.error('Erro ao chamar edge function:', error);
+        throw error;
+      }
 
-      // Buscar indicações válidas da semana atual
-      const { data: weeklyReferrals, error } = await supabase
-        .from('affiliate_referrals')
-        .select(`
-          affiliate_id,
-          created_at,
-          affiliates!inner (
-            affiliate_code,
-            user_id,
-            profiles (
-              full_name
-            )
-          )
-        `)
-        .eq('status', 'participant')
-        .gte('week_start', currentWeekStart.toISOString().split('T')[0])
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-
-      // Agrupar e contar indicações por afiliado
-      const affiliateStats: { [key: string]: AffiliateRanking } = {};
-
-      weeklyReferrals?.forEach((referral: any) => {
-        const affiliateId = referral.affiliate_id;
-        const affiliateCode = referral.affiliates.affiliate_code;
-        const userName = referral.affiliates.profiles?.full_name;
-
-        if (!affiliateStats[affiliateId]) {
-          affiliateStats[affiliateId] = {
-            affiliate_id: affiliateId,
-            affiliate_code: affiliateCode,
-            referrals_count: 0,
-            user_name: userName,
-            rank: 0
-          };
+      if (data?.success) {
+        console.log(`Encontrados ${data.data.rankings?.length || 0} afiliados no ranking`);
+        
+        // Definir período da semana
+        if (data.data.week_start && data.data.week_end) {
+          const weekStart = new Date(data.data.week_start);
+          const weekEnd = new Date(data.data.week_end);
+          setWeekPeriod(`${weekStart.toLocaleDateString('pt-BR')} - ${weekEnd.toLocaleDateString('pt-BR')}`);
         }
-        affiliateStats[affiliateId].referrals_count++;
-      });
-
-      // Converter para array e ordenar por número de indicações (decrescente)
-      const sortedRankings = Object.values(affiliateStats)
-        .sort((a, b) => b.referrals_count - a.referrals_count)
-        .slice(0, 5) // Top 5
-        .map((item, index) => ({
-          ...item,
-          rank: index + 1
-        }));
-
-      setRankings(sortedRankings);
+        
+        setRankings(data.data.rankings || []);
+      } else {
+        console.error('Resposta inválida da edge function:', data);
+        setRankings([]);
+      }
     } catch (error) {
       console.error('Erro ao buscar ranking semanal:', error);
+      setRankings([]);
     } finally {
       setLoading(false);
     }
