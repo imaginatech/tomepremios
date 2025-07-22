@@ -382,6 +382,7 @@ export type Database = {
           affiliate_code: string
           full_name: string
           referrals_count: number
+          first_referral_date: string
         }[]
       }
       get_current_user_role: {

@@ -28,11 +28,12 @@ serve(async (req) => {
     if (rankingError) {
       console.error('Erro na RPC function:', rankingError);
       
-      // Fallback: tentar query manual
+      // Fallback: tentar query manual com ordenação correta
       const { data: fallbackData, error: fallbackError } = await supabase
         .from('affiliate_referrals')
         .select(`
           affiliate_id,
+          created_at,
           affiliates!inner (
             affiliate_code,
             profiles!inner (
@@ -49,33 +50,46 @@ serve(async (req) => {
 
       console.log('Usando fallback, dados:', fallbackData);
       
-      // Processar dados do fallback
-      const affiliateStats: { [key: string]: any } = {};
-      
-      (fallbackData || []).forEach((record: any) => {
-        const affiliateId = record.affiliate_id;
-        const affiliate = record.affiliates;
-        
-        if (affiliate && affiliate.profiles) {
-          if (!affiliateStats[affiliateId]) {
-            affiliateStats[affiliateId] = {
-              affiliate_id: affiliateId,
-              affiliate_code: affiliate.affiliate_code,
-              user_name: affiliate.profiles.full_name,
-              referrals_count: 0
-            };
-          }
-          affiliateStats[affiliateId].referrals_count++;
-        }
-      });
+       // Processar dados do fallback com ordenação correta
+       const affiliateStats: { [key: string]: any } = {};
+       
+       (fallbackData || []).forEach((record: any) => {
+         const affiliateId = record.affiliate_id;
+         const affiliate = record.affiliates;
+         
+         if (affiliate && affiliate.profiles) {
+           if (!affiliateStats[affiliateId]) {
+             affiliateStats[affiliateId] = {
+               affiliate_id: affiliateId,
+               affiliate_code: affiliate.affiliate_code,
+               user_name: affiliate.profiles.full_name,
+               referrals_count: 0,
+               first_referral_date: record.created_at
+             };
+           }
+           affiliateStats[affiliateId].referrals_count++;
+           
+           // Manter a data da primeira indicação
+           if (new Date(record.created_at) < new Date(affiliateStats[affiliateId].first_referral_date)) {
+             affiliateStats[affiliateId].first_referral_date = record.created_at;
+           }
+         }
+       });
 
-      const sortedRankings = Object.values(affiliateStats)
-        .sort((a: any, b: any) => b.referrals_count - a.referrals_count)
-        .slice(0, 10)
-        .map((item: any, index) => ({
-          ...item,
-          rank: index + 1
-        }));
+       const sortedRankings = Object.values(affiliateStats)
+         .sort((a: any, b: any) => {
+           // Primeiro por número de indicações (descendente)
+           if (b.referrals_count !== a.referrals_count) {
+             return b.referrals_count - a.referrals_count;
+           }
+           // Em caso de empate, por primeira indicação (ascendente - quem fez primeiro)
+           return new Date(a.first_referral_date).getTime() - new Date(b.first_referral_date).getTime();
+         })
+         .slice(0, 10)
+         .map((item: any, index) => ({
+           ...item,
+           rank: index + 1
+         }));
 
       return new Response(
         JSON.stringify({
