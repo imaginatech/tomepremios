@@ -35,17 +35,7 @@ serve(async (req) => {
     // Buscar indicações válidas da semana atual
     const { data: weeklyReferrals, error } = await supabase
       .from('affiliate_referrals')
-      .select(`
-        affiliate_id,
-        created_at,
-        affiliates!inner (
-          affiliate_code,
-          user_id,
-          profiles (
-            full_name
-          )
-        )
-      `)
+      .select('affiliate_id, created_at')
       .eq('status', 'participant')
       .gte('week_start', currentWeekStart.toISOString().split('T')[0])
       .order('created_at', { ascending: true });
@@ -57,13 +47,70 @@ serve(async (req) => {
 
     console.log(`Encontradas ${weeklyReferrals?.length || 0} indicações válidas na semana`);
 
+    // Se não há dados, retornar vazio
+    if (!weeklyReferrals || weeklyReferrals.length === 0) {
+      console.log('Nenhuma indicação encontrada - retornando lista vazia');
+      return new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            rankings: [],
+            week_start: currentWeekStart.toISOString().split('T')[0],
+            week_end: currentWeekEnd.toISOString().split('T')[0],
+            total_affiliates: 0
+          }
+        }),
+        { 
+          status: 200, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // Buscar dados dos afiliados
+    const affiliateIds = [...new Set(weeklyReferrals.map((r: any) => r.affiliate_id))];
+    console.log('IDs dos afiliados encontrados:', affiliateIds);
+
+    const { data: affiliatesData, error: affiliatesError } = await supabase
+      .from('affiliates')
+      .select('id, affiliate_code, user_id')
+      .in('id', affiliateIds);
+
+    if (affiliatesError) {
+      console.error('Erro ao buscar dados dos afiliados:', affiliatesError);
+      throw affiliatesError;
+    }
+
+    // Buscar dados dos profiles dos afiliados
+    const userIds = affiliatesData?.map((a: any) => a.user_id) || [];
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', userIds);
+
+    if (profilesError) {
+      console.error('Erro ao buscar profiles:', profilesError);
+      throw profilesError;
+    }
+
+    console.log('Dados dos afiliados:', affiliatesData);
+    console.log('Dados dos profiles:', profilesData);
+
     // Agrupar e contar indicações por afiliado
     const affiliateStats: { [key: string]: any } = {};
 
-    weeklyReferrals?.forEach((referral: any) => {
+    weeklyReferrals.forEach((referral: any) => {
       const affiliateId = referral.affiliate_id;
-      const affiliateCode = referral.affiliates.affiliate_code;
-      const userName = referral.affiliates.profiles?.full_name;
+      const affiliateInfo = affiliatesData?.find((a: any) => a.id === affiliateId);
+      
+      if (!affiliateInfo) {
+        console.warn(`Afiliado não encontrado para ID: ${affiliateId}`);
+        return;
+      }
+
+      const profileInfo = profilesData?.find((p: any) => p.id === affiliateInfo.user_id);
+      const affiliateCode = affiliateInfo.affiliate_code;
+      const userName = profileInfo?.full_name;
 
       if (!affiliateStats[affiliateId]) {
         affiliateStats[affiliateId] = {
@@ -84,6 +131,8 @@ serve(async (req) => {
       }
     });
 
+    console.log('Estatísticas dos afiliados:', affiliateStats);
+
     // Converter para array e ordenar
     const sortedRankings = Object.values(affiliateStats)
       .sort((a: any, b: any) => {
@@ -97,6 +146,8 @@ serve(async (req) => {
         ...item,
         rank: index + 1
       }));
+
+    console.log('Rankings finais:', sortedRankings);
 
     return new Response(
       JSON.stringify({
