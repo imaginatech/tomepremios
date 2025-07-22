@@ -176,7 +176,7 @@ const AffiliateRanking = () => {
                 </div>
                 
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate text-foreground">
+                  <p className={`font-medium truncate ${affiliate.rank === 1 ? 'text-black' : 'text-foreground'}`}>
                     {affiliate.user_name || 'Afiliado'}
                   </p>
                   <p className="text-sm text-muted-foreground font-mono">
@@ -187,7 +187,7 @@ const AffiliateRanking = () => {
                 <div className="text-right">
                   <div className="flex items-center gap-1">
                     <Users className="w-4 h-4 text-muted-foreground" />
-                    <span className="font-bold text-lg">
+                    <span className={`font-bold text-lg ${affiliate.rank === 1 ? 'text-black' : ''}`}>
                       {affiliate.referrals_count}
                     </span>
                   </div>
