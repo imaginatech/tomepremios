@@ -19,36 +19,25 @@ serve(async (req) => {
   );
 
   try {
-    console.log('=== BUSCAR RANKING SEMANAL - VERSÃO CORRIGIDA ===');
+    console.log('=== BUSCAR RANKING SEMANAL - SIMPLIFICADO ===');
     
-    // Calcular semana atual (segunda a domingo - ISO 8601)
+    // Buscar dos últimos 7 dias para simplificar
     const now = new Date();
-    const currentWeekStart = new Date(now);
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(now.getDate() - 7);
     
-    // Ajustar para segunda-feira como início da semana (ISO 8601)
-    const dayOfWeek = now.getDay(); // 0 = domingo, 1 = segunda, etc.
-    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Se domingo, voltar 6 dias, senão (dia - 1)
-    currentWeekStart.setDate(now.getDate() - daysFromMonday);
-    currentWeekStart.setHours(0, 0, 0, 0);
-    
-    const currentWeekEnd = new Date(currentWeekStart);
-    currentWeekEnd.setDate(currentWeekStart.getDate() + 6);
-    currentWeekEnd.setHours(23, 59, 59, 999);
+    const sevenDaysAgoStr = sevenDaysAgo.toISOString();
+    const nowStr = now.toISOString();
 
-    const weekStartStr = currentWeekStart.toISOString().split('T')[0];
-    const weekEndStr = currentWeekEnd.toISOString().split('T')[0];
+    console.log(`Buscando referrals participant desde: ${sevenDaysAgoStr}`);
+    console.log(`Até: ${nowStr}`);
 
-    console.log(`Semana atual calculada: ${weekStartStr} a ${weekEndStr}`);
-    console.log(`Data atual: ${now.toISOString()}`);
-    console.log(`Dia da semana atual: ${dayOfWeek} (0=domingo, 1=segunda)`);
-
-    // Buscar por status 'participant' usando apenas created_at para determinar semana atual
+    // Buscar por status 'participant' usando apenas created_at
     const { data: weeklyReferrals, error } = await supabase
       .from('affiliate_referrals')
       .select('affiliate_id, created_at')
       .eq('status', 'participant')
-      .gte('created_at', `${weekStartStr}T00:00:00`)
-      .lte('created_at', `${weekEndStr}T23:59:59`)
+      .gte('created_at', sevenDaysAgoStr)
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -58,7 +47,7 @@ serve(async (req) => {
 
     console.log(`Query executada com filtros:`);
     console.log(`- Status: participant`);
-    console.log(`- Created_at entre '${weekStartStr}T00:00:00' e '${weekEndStr}T23:59:59'`);
+    console.log(`- Created_at >= '${sevenDaysAgoStr}'`);
     console.log(`Indicações encontradas:`, weeklyReferrals);
     console.log(`Total de indicações: ${weeklyReferrals?.length || 0}`);
 
@@ -80,13 +69,13 @@ serve(async (req) => {
           success: true,
           data: {
             rankings: [],
-            week_start: currentWeekStart.toISOString().split('T')[0],
-            week_end: currentWeekEnd.toISOString().split('T')[0],
+            week_start: sevenDaysAgo.toISOString().split('T')[0],
+            week_end: now.toISOString().split('T')[0],
             total_affiliates: 0,
             debug: {
               query_filters: {
                 status: 'participant',
-                created_at_filter: `created_at BETWEEN '${weekStartStr}T00:00:00' AND '${weekEndStr}T23:59:59'`
+                created_at_filter: `created_at >= '${sevenDaysAgoStr}'`
               },
               all_referrals_sample: allReferrals?.slice(0, 3) || []
             }
@@ -186,8 +175,8 @@ serve(async (req) => {
         success: true,
         data: {
           rankings: sortedRankings,
-          week_start: currentWeekStart.toISOString().split('T')[0],
-          week_end: currentWeekEnd.toISOString().split('T')[0],
+          week_start: sevenDaysAgo.toISOString().split('T')[0],
+          week_end: now.toISOString().split('T')[0],
           total_affiliates: sortedRankings.length
         }
       }),
