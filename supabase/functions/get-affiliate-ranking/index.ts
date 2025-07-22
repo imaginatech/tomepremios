@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -18,13 +19,13 @@ serve(async (req) => {
   );
 
   try {
-    console.log('=== BUSCAR RANKING SEMANAL ===');
+    console.log('=== BUSCAR RANKING SEMANAL - VERSÃO CORRIGIDA ===');
     
     // Calcular semana atual (segunda a domingo - ISO 8601)
     const now = new Date();
     const currentWeekStart = new Date(now);
     
-    // Ajustar para segunda-feira como início da semana
+    // Ajustar para segunda-feira como início da semana (ISO 8601)
     const dayOfWeek = now.getDay(); // 0 = domingo, 1 = segunda, etc.
     const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Se domingo, voltar 6 dias, senão (dia - 1)
     currentWeekStart.setDate(now.getDate() - daysFromMonday);
@@ -37,15 +38,17 @@ serve(async (req) => {
     const weekStartStr = currentWeekStart.toISOString().split('T')[0];
     const weekEndStr = currentWeekEnd.toISOString().split('T')[0];
 
-    console.log(`Semana atual: ${weekStartStr} a ${weekEndStr}`);
+    console.log(`Semana atual calculada: ${weekStartStr} a ${weekEndStr}`);
+    console.log(`Data atual: ${now.toISOString()}`);
+    console.log(`Dia da semana atual: ${dayOfWeek} (0=domingo, 1=segunda)`);
 
-    // Buscar indicações válidas da semana atual
+    // CORREÇÃO PRINCIPAL: Buscar por status 'participant' E verificar se week_start está na semana atual
+    // OU se created_at está na semana atual para casos onde week_start não foi definido
     const { data: weeklyReferrals, error } = await supabase
       .from('affiliate_referrals')
-      .select('affiliate_id, created_at')
+      .select('affiliate_id, created_at, week_start')
       .eq('status', 'participant')
-      .gte('week_start', weekStartStr)
-      .lte('week_start', weekEndStr)
+      .or(`week_start.eq.${weekStartStr},and(week_start.is.null,created_at.gte.${weekStartStr}T00:00:00,created_at.lte.${weekEndStr}T23:59:59)`)
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -53,13 +56,25 @@ serve(async (req) => {
       throw error;
     }
 
-    console.log(`Query executada: week_start >= '${weekStartStr}' AND week_start <= '${weekEndStr}'`);
+    console.log(`Query executada com filtros:`);
+    console.log(`- Status: participant`);
+    console.log(`- Week_start = '${weekStartStr}' OU (week_start IS NULL E created_at entre '${weekStartStr}' e '${weekEndStr}')`);
     console.log(`Indicações encontradas:`, weeklyReferrals);
-    console.log(`Encontradas ${weeklyReferrals?.length || 0} indicações válidas na semana`);
+    console.log(`Total de indicações: ${weeklyReferrals?.length || 0}`);
 
     // Se não há dados, retornar vazio
     if (!weeklyReferrals || weeklyReferrals.length === 0) {
-      console.log('Nenhuma indicação encontrada - retornando lista vazia');
+      console.log('Nenhuma indicação participant encontrada - retornando lista vazia');
+      
+      // Vamos fazer uma consulta adicional para debug
+      const { data: allReferrals } = await supabase
+        .from('affiliate_referrals')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10);
+      
+      console.log('DEBUG - Últimas 10 indicações na base:', allReferrals);
+      
       return new Response(
         JSON.stringify({
           success: true,
@@ -67,7 +82,14 @@ serve(async (req) => {
             rankings: [],
             week_start: currentWeekStart.toISOString().split('T')[0],
             week_end: currentWeekEnd.toISOString().split('T')[0],
-            total_affiliates: 0
+            total_affiliates: 0,
+            debug: {
+              query_filters: {
+                status: 'participant',
+                week_filter: `week_start='${weekStartStr}' OR (week_start IS NULL AND created_at BETWEEN '${weekStartStr}' AND '${weekEndStr}')`
+              },
+              all_referrals_sample: allReferrals?.slice(0, 3) || []
+            }
           }
         }),
         { 
