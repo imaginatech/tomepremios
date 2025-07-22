@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trophy, Users, Award, Crown } from 'lucide-react';
+import { Trophy, Users, Award, Crown, AlertCircle, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AffiliateRanking {
@@ -15,42 +17,41 @@ interface AffiliateRanking {
 const AffiliateRanking = () => {
   const [rankings, setRankings] = useState<AffiliateRanking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [weekPeriod, setWeekPeriod] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
 
   useEffect(() => {
-    fetchWeeklyRanking();
+    fetchRanking();
   }, []);
 
-  const fetchWeeklyRanking = async () => {
+  const fetchRanking = async () => {
+    setLoading(true);
+    setError(null);
+    
     try {
-      console.log('Chamando edge function get-affiliate-ranking...');
+      console.log('🚀 Chamando edge function get-affiliate-ranking...');
       
-      // Chamar a edge function que já faz todo o processamento
       const { data, error } = await supabase.functions.invoke('get-affiliate-ranking');
 
+      console.log('📊 Resposta da edge function:', data);
+
       if (error) {
-        console.error('Erro ao chamar edge function:', error);
+        console.error('❌ Erro ao chamar edge function:', error);
         throw error;
       }
 
       if (data?.success) {
-        console.log(`Encontrados ${data.data.rankings?.length || 0} afiliados no ranking`);
-        
-        // Definir período da semana
-        if (data.data.week_start && data.data.week_end) {
-          const weekStart = new Date(data.data.week_start);
-          const weekEnd = new Date(data.data.week_end);
-          setWeekPeriod(`${weekStart.toLocaleDateString('pt-BR')} - ${weekEnd.toLocaleDateString('pt-BR')}`);
-        }
-        
+        console.log(`✅ Encontrados ${data.data.rankings?.length || 0} afiliados no ranking`);
         setRankings(data.data.rankings || []);
+        setDebugInfo(data.data.debug);
       } else {
-        console.error('Resposta inválida da edge function:', data);
-        setRankings([]);
+        console.error('❌ Resposta inválida da edge function:', data);
+        setError('Resposta inválida do servidor');
+        setDebugInfo(data?.data?.debug);
       }
-    } catch (error) {
-      console.error('Erro ao buscar ranking semanal:', error);
-      setRankings([]);
+    } catch (error: any) {
+      console.error('❌ Erro ao buscar ranking:', error);
+      setError(error.message || 'Erro desconhecido');
     } finally {
       setLoading(false);
     }
@@ -69,26 +70,13 @@ const AffiliateRanking = () => {
     }
   };
 
-  const getRankColor = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return 'from-yellow-400 to-yellow-600';
-      case 2:
-        return 'from-gray-300 to-gray-500';
-      case 3:
-        return 'from-amber-400 to-amber-600';
-      default:
-        return 'from-muted to-muted-foreground';
-    }
-  };
-
   if (loading) {
     return (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Trophy className="w-5 h-5" />
-            Top Afiliados da Semana
+            Top 10 Afiliados
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -109,15 +97,50 @@ const AffiliateRanking = () => {
     );
   }
 
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Trophy className="w-5 h-5" />
+            Top 10 Afiliados
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
+            <p className="text-destructive mb-4">
+              Erro ao carregar ranking: {error}
+            </p>
+            <Button onClick={fetchRanking} variant="outline" className="flex items-center gap-2">
+              <RefreshCw className="w-4 h-4" />
+              Tentar Novamente
+            </Button>
+            {debugInfo && (
+              <details className="mt-4 text-left">
+                <summary className="cursor-pointer text-sm text-muted-foreground">
+                  Ver informações de debug
+                </summary>
+                <pre className="mt-2 p-2 bg-muted rounded text-xs overflow-auto">
+                  {JSON.stringify(debugInfo, null, 2)}
+                </pre>
+              </details>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Trophy className="w-5 h-5" />
-          Top Afiliados da Semana
+          Top 10 Afiliados
         </CardTitle>
         <CardDescription>
-          {weekPeriod && `Período: ${weekPeriod}`}
+          Ranking dos afiliados com mais indicações válidas
           <br />
           <span className="text-primary font-medium">🏆 1º lugar ganha R$ 500,00 toda sexta-feira às 20h!</span>
         </CardDescription>
@@ -127,11 +150,15 @@ const AffiliateRanking = () => {
           <div className="text-center py-8">
             <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground">
-              Nenhuma indicação válida registrada esta semana.
+              Nenhuma indicação válida registrada ainda.
             </p>
             <p className="text-sm text-muted-foreground mt-2">
               Seja o primeiro a indicar alguém que compre um título!
             </p>
+            <Button onClick={fetchRanking} variant="outline" size="sm" className="mt-4">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Atualizar
+            </Button>
           </div>
         ) : (
           <div className="space-y-3">

@@ -19,37 +19,41 @@ serve(async (req) => {
   );
 
   try {
-    console.log('=== BUSCAR TOP 10 AFILIADOS - SEM FILTROS ===');
+    console.log('=== BUSCAR TOP 10 AFILIADOS - QUERY DIRETA ===');
     
-    // Buscar TODAS as indicações com status 'participant' - sem filtro de data
-    const { data: allReferrals, error } = await supabase
+    // Usar exatamente a query que funciona manualmente
+    const { data: rankingData, error: rankingError } = await supabase
       .from('affiliate_referrals')
-      .select('affiliate_id, created_at')
-      .eq('status', 'participant')
-      .order('created_at', { ascending: true });
+      .select(`
+        affiliate_id,
+        affiliates!inner (
+          affiliate_code,
+          user_id,
+          profiles!inner (
+            full_name
+          )
+        )
+      `)
+      .eq('status', 'participant');
 
-    if (error) {
-      console.error('Erro ao buscar indicações:', error);
-      throw error;
+    if (rankingError) {
+      console.error('Erro na query principal:', rankingError);
+      throw rankingError;
     }
 
-    console.log(`Query executada:`);
-    console.log(`- Status: participant (SEM FILTROS DE DATA)`);
-    console.log(`Indicações encontradas:`, allReferrals);
-    console.log(`Total de indicações: ${allReferrals?.length || 0}`);
+    console.log('Dados brutos da query:', rankingData);
+    console.log(`Total de registros encontrados: ${rankingData?.length || 0}`);
 
-    // Se não há dados, retornar vazio
-    if (!allReferrals || allReferrals.length === 0) {
-      console.log('Nenhuma indicação participant encontrada - retornando lista vazia');
+    if (!rankingData || rankingData.length === 0) {
+      console.log('Nenhuma indicação participant encontrada');
       
-      // Debug - buscar todas as indicações para ver o que existe
-      const { data: debugReferrals } = await supabase
+      // Debug - buscar todas as indicações para diagnosticar
+      const { data: debugData } = await supabase
         .from('affiliate_referrals')
         .select('*')
-        .order('created_at', { ascending: false })
         .limit(10);
       
-      console.log('DEBUG - Últimas 10 indicações na base:', debugReferrals);
+      console.log('DEBUG - Todas as indicações:', debugData);
       
       return new Response(
         JSON.stringify({
@@ -58,11 +62,8 @@ serve(async (req) => {
             rankings: [],
             total_affiliates: 0,
             debug: {
-              query_filters: {
-                status: 'participant',
-                filter: 'SEM FILTROS DE DATA'
-              },
-              all_referrals_sample: debugReferrals?.slice(0, 3) || []
+              message: 'Nenhuma indicação participant encontrada',
+              all_referrals: debugData || []
             }
           }
         }),
@@ -73,87 +74,49 @@ serve(async (req) => {
       );
     }
 
-    // Buscar dados dos afiliados
-    const affiliateIds = [...new Set(allReferrals.map((r: any) => r.affiliate_id))];
-    console.log('IDs dos afiliados encontrados:', affiliateIds);
-
-    const { data: affiliatesData, error: affiliatesError } = await supabase
-      .from('affiliates')
-      .select('id, affiliate_code, user_id')
-      .in('id', affiliateIds);
-
-    if (affiliatesError) {
-      console.error('Erro ao buscar dados dos afiliados:', affiliatesError);
-      throw affiliatesError;
-    }
-
-    // Buscar dados dos profiles dos afiliados
-    const userIds = affiliatesData?.map((a: any) => a.user_id) || [];
-    const { data: profilesData, error: profilesError } = await supabase
-      .from('profiles')
-      .select('id, full_name')
-      .in('id', userIds);
-
-    if (profilesError) {
-      console.error('Erro ao buscar profiles:', profilesError);
-      throw profilesError;
-    }
-
-    console.log('Dados dos afiliados:', affiliatesData);
-    console.log('Dados dos profiles:', profilesData);
-
-    // Agrupar e contar indicações por afiliado
+    // Agrupar por afiliado e contar indicações
     const affiliateStats: { [key: string]: any } = {};
-
-    allReferrals.forEach((referral: any) => {
-      const affiliateId = referral.affiliate_id;
-      const affiliateInfo = affiliatesData?.find((a: any) => a.id === affiliateId);
+    
+    rankingData.forEach((record: any) => {
+      const affiliateId = record.affiliate_id;
+      const affiliate = record.affiliates;
       
-      if (!affiliateInfo) {
+      if (!affiliate) {
         console.warn(`Afiliado não encontrado para ID: ${affiliateId}`);
         return;
       }
 
-      const profileInfo = profilesData?.find((p: any) => p.id === affiliateInfo.user_id);
-      const affiliateCode = affiliateInfo.affiliate_code;
-      const userName = profileInfo?.full_name;
+      const profile = affiliate.profiles;
+      if (!profile) {
+        console.warn(`Profile não encontrado para afiliado: ${affiliateId}`);
+        return;
+      }
 
       if (!affiliateStats[affiliateId]) {
         affiliateStats[affiliateId] = {
           affiliate_id: affiliateId,
-          affiliate_code: affiliateCode,
+          affiliate_code: affiliate.affiliate_code,
+          user_name: profile.full_name,
           referrals_count: 0,
-          user_name: userName,
-          first_referral: referral.created_at,
           rank: 0
         };
       }
       
       affiliateStats[affiliateId].referrals_count++;
-      
-      // Manter o primeiro referral para critério de desempate
-      if (new Date(referral.created_at) < new Date(affiliateStats[affiliateId].first_referral)) {
-        affiliateStats[affiliateId].first_referral = referral.created_at;
-      }
     });
 
-    console.log('Estatísticas dos afiliados:', affiliateStats);
+    console.log('Estatísticas processadas:', affiliateStats);
 
-    // Converter para array e ordenar
+    // Converter para array e ordenar por quantidade de indicações
     const sortedRankings = Object.values(affiliateStats)
-      .sort((a: any, b: any) => {
-        if (b.referrals_count !== a.referrals_count) {
-          return b.referrals_count - a.referrals_count; // Mais indicações primeiro
-        }
-        return new Date(a.first_referral).getTime() - new Date(b.first_referral).getTime(); // Primeiro referral ganha
-      })
+      .sort((a: any, b: any) => b.referrals_count - a.referrals_count)
       .slice(0, 10) // Top 10
       .map((item: any, index) => ({
         ...item,
         rank: index + 1
       }));
 
-    console.log('Rankings finais:', sortedRankings);
+    console.log('Rankings finais ordenados:', sortedRankings);
 
     return new Response(
       JSON.stringify({
@@ -170,14 +133,16 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('=== ERRO NO RANKING ===');
-    console.error('Erro:', error);
+    console.error('=== ERRO CRÍTICO NO RANKING ===');
+    console.error('Erro completo:', error);
+    console.error('Stack trace:', error.stack);
     
     return new Response(
       JSON.stringify({ 
         success: false, 
         error: 'Erro interno do servidor',
-        details: error.message 
+        details: error.message,
+        timestamp: new Date().toISOString()
       }),
       { 
         status: 500, 
