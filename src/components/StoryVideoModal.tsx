@@ -36,52 +36,61 @@ const StoryVideoModal: React.FC<StoryVideoModalProps> = ({
         setHlsInstance(null);
       }
       
-      // Check if HLS is supported
-      if (Hls.isSupported()) {
-        console.log('✅ HLS suportado, carregando...');
-        const hls = new Hls({
-          debug: false,
-          enableWorker: false,
-        });
-        
-        hls.loadSource(videoUrl);
-        hls.attachMedia(video);
-        setHlsInstance(hls);
-        
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          console.log('📊 Manifest HLS carregado');
-          video.play().then(() => {
-            setIsPlaying(true);
-            console.log('▶️ Vídeo iniciado automaticamente');
-          }).catch(error => {
-            console.error('❌ Erro ao iniciar vídeo:', error);
-            setIsPlaying(false);
+      // Aguardar um frame antes de configurar o vídeo
+      const setupVideo = () => {
+        // Check if HLS is supported
+        if (Hls.isSupported()) {
+          console.log('✅ HLS suportado, carregando...');
+          const hls = new Hls({
+            debug: false,
+            enableWorker: false,
           });
-        });
-        
-        hls.on(Hls.Events.ERROR, (event, data) => {
-          console.error('❌ Erro HLS:', data);
-        });
-        
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        console.log('🍎 Safari - usando HLS nativo');
-        // Native HLS support (Safari)
-        video.src = videoUrl;
-        video.addEventListener('loadedmetadata', () => {
-          console.log('📊 Metadata carregada (Safari)');
-          video.play().then(() => {
-            setIsPlaying(true);
-            console.log('▶️ Vídeo iniciado automaticamente (Safari)');
-          }).catch(error => {
-            console.error('❌ Erro ao iniciar vídeo (Safari):', error);
-            setIsPlaying(false);
+          
+          hls.loadSource(videoUrl);
+          hls.attachMedia(video);
+          setHlsInstance(hls);
+          
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            console.log('📊 Manifest HLS carregado');
+            setTimeout(() => {
+              video.play().then(() => {
+                setIsPlaying(true);
+                console.log('▶️ Vídeo iniciado automaticamente');
+              }).catch(error => {
+                console.error('❌ Erro ao iniciar vídeo:', error);
+                setIsPlaying(false);
+              });
+            }, 100);
           });
-        });
-      } else {
-        console.error('❌ HLS não suportado neste navegador');
-      }
-      
-      video.currentTime = 0;
+          
+          hls.on(Hls.Events.ERROR, (event, data) => {
+            console.error('❌ Erro HLS:', data);
+          });
+          
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          console.log('🍎 Safari - usando HLS nativo');
+          // Native HLS support (Safari)
+          video.src = videoUrl;
+          video.addEventListener('loadedmetadata', () => {
+            console.log('📊 Metadata carregada (Safari)');
+            setTimeout(() => {
+              video.play().then(() => {
+                setIsPlaying(true);
+                console.log('▶️ Vídeo iniciado automaticamente (Safari)');
+              }).catch(error => {
+                console.error('❌ Erro ao iniciar vídeo (Safari):', error);
+                setIsPlaying(false);
+              });
+            }, 100);
+          });
+        } else {
+          console.error('❌ HLS não suportado neste navegador');
+        }
+        
+        video.currentTime = 0;
+      };
+
+      requestAnimationFrame(setupVideo);
     }
     
     return () => {
