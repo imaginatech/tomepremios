@@ -23,6 +23,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, affil
   const [whatsapp, setWhatsapp] = useState('');
   const [loading, setLoading] = useState(false);
   const [affiliateCode, setAffiliateCode] = useState('');
+  const [whatsappError, setWhatsappError] = useState('');
   const { signIn, signUp } = useAuth();
   const { toast } = useToast();
 
@@ -72,6 +73,40 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, affil
   const handleWhatsAppChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatWhatsApp(e.target.value);
     setWhatsapp(formatted);
+    
+    // Limpar erro de WhatsApp quando usuário digita
+    if (whatsappError) {
+      setWhatsappError('');
+    }
+  };
+
+  const checkWhatsAppExists = async (whatsappNumber: string) => {
+    if (!whatsappNumber || whatsappNumber.replace(/\D/g, '').length < 11) {
+      return false;
+    }
+
+    try {
+      const cleanWhatsApp = whatsappNumber.replace(/\D/g, '');
+      
+      const { data: existingProfiles, error } = await supabase
+        .from('profiles')
+        .select('id, whatsapp')
+        .not('whatsapp', 'is', null);
+
+      if (!error && existingProfiles) {
+        const duplicateProfile = existingProfiles.find(profile => {
+          if (!profile.whatsapp) return false;
+          const existingCleanWhatsApp = profile.whatsapp.replace(/\D/g, '');
+          return existingCleanWhatsApp === cleanWhatsApp;
+        });
+
+        return !!duplicateProfile;
+      }
+    } catch (error) {
+      console.error('Erro ao verificar WhatsApp:', error);
+    }
+    
+    return false;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -113,6 +148,19 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, affil
             description: "Por favor, insira um número de WhatsApp válido",
             variant: "destructive",
           });
+          return;
+        }
+
+        // Verificar se WhatsApp já existe antes de tentar cadastrar
+        const whatsappExists = await checkWhatsAppExists(whatsapp);
+        if (whatsappExists) {
+          setWhatsappError('Este número já está cadastrado');
+          toast({
+            title: "WhatsApp já cadastrado",
+            description: "Este número já está cadastrado. Faça login para acessar sua conta.",
+            variant: "destructive",
+          });
+          setIsLogin(true); // Mudar para modo login
           return;
         }
       }
@@ -265,11 +313,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, affil
                   placeholder="(00) 0 0000-0000"
                   value={whatsapp}
                   onChange={handleWhatsAppChange}
-                  className="pl-10"
+                  className={`pl-10 ${whatsappError ? 'border-destructive' : ''}`}
                   maxLength={16}
                   required
                 />
               </div>
+              {whatsappError && (
+                <p className="text-sm text-destructive">{whatsappError}</p>
+              )}
             </div>
           )}
 

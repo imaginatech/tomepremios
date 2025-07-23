@@ -56,20 +56,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Verificar se já existe usuário com este WhatsApp
     try {
       if (whatsapp) {
-        const { data: profileWithWhatsApp, error: profileError } = await supabase
+        // Normalizar o número removendo formatação para comparação
+        const cleanWhatsApp = whatsapp.replace(/\D/g, '');
+        
+        // Buscar por números com ou sem formatação
+        const { data: existingProfiles, error: profileError } = await supabase
           .from('profiles')
-          .select('id, full_name')
-          .eq('whatsapp', whatsapp)
-          .maybeSingle();
+          .select('id, full_name, whatsapp')
+          .not('whatsapp', 'is', null);
 
-        if (profileWithWhatsApp && !profileError) {
-          return { 
-            data: null, 
-            error: { 
-              message: 'Este número de WhatsApp já está cadastrado. Faça login para acessar sua conta.',
-              code: 'whatsapp_already_exists'
-            } 
-          };
+        if (!profileError && existingProfiles) {
+          // Verificar se algum perfil tem o mesmo WhatsApp (comparando apenas números)
+          const duplicateProfile = existingProfiles.find(profile => {
+            if (!profile.whatsapp) return false;
+            const existingCleanWhatsApp = profile.whatsapp.replace(/\D/g, '');
+            return existingCleanWhatsApp === cleanWhatsApp;
+          });
+
+          if (duplicateProfile) {
+            return { 
+              data: null, 
+              error: { 
+                message: 'Este número de WhatsApp já está cadastrado. Faça login para acessar sua conta.',
+                code: 'whatsapp_already_exists'
+              } 
+            };
+          }
         }
       }
     } catch (checkError) {
