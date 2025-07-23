@@ -4,10 +4,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Edit, Save, X, User, Phone, CreditCard } from 'lucide-react';
+import { Edit, Save, X, User, Phone, CreditCard, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Profile {
   id: string;
@@ -17,11 +28,12 @@ interface Profile {
 }
 
 const UserProfile = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { toast } = useToast();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [formData, setFormData] = useState({
     full_name: '',
     whatsapp: '',
@@ -166,6 +178,47 @@ const UserProfile = () => {
     setIsEditing(false);
   };
 
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+
+    setDeleteLoading(true);
+    try {
+      const { error } = await supabase.functions.invoke('delete-user', {
+        body: { 
+          userId: user.id,
+          isAdminAction: false 
+        }
+      });
+
+      if (error) {
+        console.error('Error deleting account:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao excluir conta. Tente novamente.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      toast({
+        title: "Conta excluída",
+        description: "Sua conta foi excluída com sucesso.",
+      });
+
+      // Fazer logout após excluir a conta
+      await signOut();
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir conta. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <Card>
@@ -273,6 +326,54 @@ const UserProfile = () => {
             disabled={!isEditing}
             placeholder="Sua chave PIX para receber prêmios"
           />
+        </div>
+
+        {/* Zona de Perigo */}
+        <div className="mt-8 pt-6 border-t border-destructive/20">
+          <h4 className="text-lg font-semibold text-destructive mb-4">Zona de Perigo</h4>
+          <p className="text-sm text-muted-foreground mb-4">
+            Esta ação é irreversível. Todos os seus dados serão permanentemente excluídos.
+          </p>
+          
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={deleteLoading}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                {deleteLoading ? "Excluindo..." : "Excluir Conta"}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir conta permanentemente?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta ação não pode ser desfeita. Isso irá permanentemente excluir sua conta 
+                  e remover todos os seus dados de nossos servidores, incluindo:
+                  <br /><br />
+                  • Seus dados pessoais
+                  <br />
+                  • Histórico de participação em sorteios
+                  <br />
+                  • Bilhetes comprados
+                  <br />
+                  • Informações de afiliado (se aplicável)
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteAccount}
+                  disabled={deleteLoading}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {deleteLoading ? "Excluindo..." : "Sim, excluir conta"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
 
       </CardContent>

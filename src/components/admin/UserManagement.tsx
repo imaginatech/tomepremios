@@ -15,9 +15,21 @@ import {
   CreditCard,
   Trophy,
   Eye,
-  Filter
+  Filter,
+  Trash2
 } from 'lucide-react';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface UserProfile {
   id: string;
@@ -43,6 +55,7 @@ const UserManagement = () => {
   const [userStats, setUserStats] = useState<Record<string, UserStats>>({});
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [showUserDetails, setShowUserDetails] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -177,6 +190,45 @@ const UserManagement = () => {
     setShowUserDetails(true);
   };
 
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    setDeleteLoading(userId);
+    try {
+      const { error } = await supabase.functions.invoke('delete-user', {
+        body: { 
+          userId: userId,
+          isAdminAction: true 
+        }
+      });
+
+      if (error) {
+        console.error('Error deleting user:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao excluir usuário. Tente novamente.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      toast({
+        title: "Usuário excluído",
+        description: `O usuário ${userName} foi excluído com sucesso.`,
+      });
+
+      // Refresh the users list
+      fetchUsers();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir usuário. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setDeleteLoading(null);
+    }
+  };
+
   const getRoleBadge = (role: string | null) => {
     if (role === 'admin') {
       return <Badge variant="destructive">Admin</Badge>;
@@ -225,13 +277,54 @@ const UserManagement = () => {
                   <Users className="w-5 h-5 text-primary" />
                   {getRoleBadge(user.role)}
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleViewDetails(user)}
-                >
-                  <Eye className="w-4 h-4" />
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleViewDetails(user)}
+                  >
+                    <Eye className="w-4 h-4" />
+                  </Button>
+                  
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        disabled={deleteLoading === user.id}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Excluir usuário?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Esta ação não pode ser desfeita. Isso irá permanentemente excluir o usuário 
+                          <strong> {user.full_name || 'sem nome'}</strong> e remover todos os seus dados, incluindo:
+                          <br /><br />
+                          • Dados pessoais
+                          <br />
+                          • Histórico de participação em sorteios
+                          <br />
+                          • Bilhetes comprados
+                          <br />
+                          • Informações de afiliado (se aplicável)
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDeleteUser(user.id, user.full_name || 'Usuário')}
+                          disabled={deleteLoading === user.id}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {deleteLoading === user.id ? "Excluindo..." : "Sim, excluir usuário"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </div>
 
               <div className="space-y-2">
