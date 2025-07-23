@@ -53,6 +53,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     console.log('Signing up with data:', { email, fullName, whatsapp, affiliateCode });
     
+    // Verificar se já existe usuário com este WhatsApp
+    try {
+      if (whatsapp) {
+        const { data: profileWithWhatsApp, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .eq('whatsapp', whatsapp)
+          .maybeSingle();
+
+        if (profileWithWhatsApp && !profileError) {
+          return { 
+            data: null, 
+            error: { 
+              message: 'Este número de WhatsApp já está cadastrado. Faça login para acessar sua conta.',
+              code: 'whatsapp_already_exists'
+            } 
+          };
+        }
+      }
+    } catch (checkError) {
+      console.log('Erro na verificação de duplicatas:', checkError);
+      // Continuar com o cadastro mesmo se a verificação falhou
+    }
+    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,

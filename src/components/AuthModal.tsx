@@ -153,17 +153,29 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, affil
 
       if (error) {
         let errorMessage = "Ocorreu um erro. Tente novamente.";
+        let errorTitle = "Erro";
         
         if (error.message.includes('Invalid login credentials')) {
           errorMessage = "Credenciais inválidas. Verifique seu email e senha.";
         } else if (error.message.includes('User already registered')) {
-          errorMessage = "Este email já está cadastrado. Faça login.";
+          errorMessage = "Este email já está cadastrado. Faça login para acessar sua conta.";
+          errorTitle = "Usuário já cadastrado";
         } else if (error.message.includes('Email not confirmed')) {
           errorMessage = "Confirme seu email antes de fazer login.";
+        } else if (error.code === 'whatsapp_already_exists') {
+          errorMessage = error.message;
+          errorTitle = "WhatsApp já cadastrado";
+          // Alternar para modo login
+          setIsLogin(true);
+        } else if (error.code === 'email_already_exists') {
+          errorMessage = error.message;
+          errorTitle = "Email já cadastrado";
+          // Alternar para modo login
+          setIsLogin(true);
         }
 
         toast({
-          title: "Erro",
+          title: errorTitle,
           description: errorMessage,
           variant: "destructive",
         });
