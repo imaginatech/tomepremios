@@ -3,10 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Copy, Share2, Users, Gift, TrendingUp, ExternalLink } from 'lucide-react';
+import { Copy, Share2, Users, Gift, TrendingUp, ExternalLink, QrCode } from 'lucide-react';
+import QRCode from 'qrcode';
 import AffiliateSignupButton from './AffiliateSignupButton';
 
 interface AffiliateData {
@@ -40,6 +42,8 @@ const AffiliateArea = () => {
   const [weeklyStats, setWeeklyStats] = useState<WeeklyStats>({ current_week_referrals: 0, current_rank: null, total_referrals: 0 });
   const [loading, setLoading] = useState(true);
   const [hasPurchase, setHasPurchase] = useState(false);
+  const [qrCodeData, setQrCodeData] = useState<string | null>(null);
+  const [generatingQr, setGeneratingQr] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -194,6 +198,41 @@ const AffiliateArea = () => {
     }
   };
 
+  const generateQRCode = async () => {
+    if (!affiliateData) return;
+    
+    setGeneratingQr(true);
+    try {
+      const baseUrl = window.location.origin;
+      const affiliateLink = `${baseUrl}?ref=${affiliateData.affiliate_code}`;
+      
+      const qrCodeDataUrl = await QRCode.toDataURL(affiliateLink, {
+        width: 256,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+      
+      setQrCodeData(qrCodeDataUrl);
+      
+      toast({
+        title: "QR Code gerado!",
+        description: "QR Code do seu link de afiliado foi gerado com sucesso.",
+      });
+    } catch (error) {
+      console.error('Erro ao gerar QR Code:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível gerar o QR Code.",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingQr(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -290,12 +329,71 @@ const AffiliateArea = () => {
               readOnly
               className="font-mono text-sm"
             />
-            <Button onClick={copyAffiliateLink} variant="outline" size="icon">
+            <Button onClick={copyAffiliateLink} variant="outline" size="icon" title="Copiar link">
               <Copy className="w-4 h-4" />
             </Button>
-            <Button onClick={shareAffiliateLink} variant="outline" size="icon">
+            <Button onClick={shareAffiliateLink} variant="outline" size="icon" title="Compartilhar">
               <Share2 className="w-4 h-4" />
             </Button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button 
+                  onClick={generateQRCode} 
+                  variant="outline" 
+                  size="icon" 
+                  disabled={generatingQr}
+                  title="Gerar QR Code"
+                >
+                  <QrCode className="w-4 h-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>QR Code do Link de Afiliado</DialogTitle>
+                </DialogHeader>
+                <div className="flex flex-col items-center space-y-4 p-4">
+                  {qrCodeData ? (
+                    <>
+                      <div className="bg-white p-4 rounded-lg">
+                        <img 
+                          src={qrCodeData} 
+                          alt="QR Code do link de afiliado" 
+                          className="w-64 h-64"
+                        />
+                      </div>
+                      <p className="text-sm text-muted-foreground text-center">
+                        Escaneie este QR Code para acessar seu link de afiliado
+                      </p>
+                      <Button
+                        onClick={() => {
+                          const link = document.createElement('a');
+                          link.download = `qrcode-afiliado-${affiliateData.affiliate_code}.png`;
+                          link.href = qrCodeData;
+                          link.click();
+                        }}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        Baixar QR Code
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center space-y-2">
+                      <div className="w-64 h-64 bg-muted rounded-lg flex items-center justify-center">
+                        {generatingQr ? (
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        ) : (
+                          <QrCode className="w-16 h-16 text-muted-foreground" />
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {generatingQr ? 'Gerando QR Code...' : 'Clique no botão QR Code para gerar'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Seu código:</span>
