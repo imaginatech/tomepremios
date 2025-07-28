@@ -147,7 +147,7 @@ serve(async (req) => {
         affiliate_id: winner.id,
         month_year: monthYear,
         referrals_count: winnerStats.count,
-        prize_amount: 1320.00 // 1 salário mínimo
+        prize_amount: 1518.00 // 1 salário mínimo atualizado
       })
       .select()
       .single();
@@ -165,7 +165,7 @@ serve(async (req) => {
     console.log(`Afiliado: ${winner.affiliate_code}`);
     console.log(`Nome: ${winner.profiles?.full_name || 'Não informado'}`);
     console.log(`PIX: ${winner.profiles?.pix_key || 'Não informado'}`);
-    console.log(`Valor: R$ 1.320,00 (1 salário)`);
+    console.log(`Valor: R$ 1.518,00 (1 salário)`);
     console.log(`Mês: ${monthYear}`);
     console.log(`Indicações válidas: ${winnerStats.count}`);
 
@@ -179,7 +179,7 @@ serve(async (req) => {
           affiliate_name: winner.profiles?.full_name,
           pix_key: winner.profiles?.pix_key,
           referrals_count: winnerStats.count,
-          prize_amount: 1320.00,
+          prize_amount: 1518.00,
           month_year: monthYear
         }
       }),
