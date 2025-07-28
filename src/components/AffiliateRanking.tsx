@@ -142,7 +142,7 @@ const AffiliateRanking = () => {
         <CardDescription>
           Ranking dos afiliados com mais indicações válidas
           <br />
-          <span className="text-primary font-medium">🏆 1º lugar ganha R$ 1.320,00 todo dia 25 do mês!</span>
+          <span className="text-primary font-medium">🏆 1º lugar ganha 1 salário todo dia 25 do mês!</span>
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -202,7 +202,7 @@ const AffiliateRanking = () => {
                       Líder
                     </Badge>
                     <p className="text-xs text-black font-medium mt-1">
-                      R$ 1.320,00
+                      1 salário
                     </p>
                   </div>
                 )}
@@ -216,7 +216,7 @@ const AffiliateRanking = () => {
           <ul className="text-sm text-muted-foreground space-y-1">
             <li>• Indique pessoas usando seu link de afiliado</li>
             <li>• Ganhe 1 ponto por cada indicado que comprar um título</li>
-            <li>• O 1º lugar do mês ganha R$ 1.320,00 via PIX (1 salário)</li>
+            <li>• O 1º lugar do mês ganha 1 salário via PIX</li>
             <li>• Premiação automática todo dia 25 do mês às 20h</li>
           </ul>
         </div>
