@@ -136,6 +136,36 @@ export type Database = {
           },
         ]
       }
+      monthly_affiliate_winners: {
+        Row: {
+          affiliate_id: string
+          created_at: string
+          id: string
+          month_year: string
+          paid_at: string | null
+          prize_amount: number
+          referrals_count: number
+        }
+        Insert: {
+          affiliate_id: string
+          created_at?: string
+          id?: string
+          month_year: string
+          paid_at?: string | null
+          prize_amount?: number
+          referrals_count?: number
+        }
+        Update: {
+          affiliate_id?: string
+          created_at?: string
+          id?: string
+          month_year?: string
+          paid_at?: string | null
+          prize_amount?: number
+          referrals_count?: number
+        }
+        Relationships: []
+      }
       pix_payments: {
         Row: {
           amount: number

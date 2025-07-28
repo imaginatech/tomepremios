@@ -52,5 +52,8 @@ verify_jwt = false
 [functions.get-affiliate-ranking]
 verify_jwt = false
 
+[functions.monthly-affiliate-payout]
+verify_jwt = false
+
 [analytics]
 enabled = false
