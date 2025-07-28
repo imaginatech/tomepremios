@@ -6,10 +6,10 @@ const AffiliateWinners = () => {
   const affiliateWinners = [
     {
       name: "Weverson Armani",
-      period: "Esta semana",
+      period: "Janeiro 2025",
       referrals: 34,
-      prize: "R$ 500,00",
-      date: "25 Jul 2025"
+      prize: "R$ 1.320,00",
+      date: "25 Jan 2025"
     }
   ];
 

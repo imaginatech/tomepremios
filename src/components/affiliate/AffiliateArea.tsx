@@ -443,11 +443,11 @@ const AffiliateArea = () => {
       </Card>
 
       {/* Estatísticas Semanais */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Seu Desempenho Semanal</CardTitle>
+        <Card>
+          <CardHeader>
+          <CardTitle>Seu Desempenho Mensal</CardTitle>
           <CardDescription>
-            Acompanhe sua posição na competição semanal pelo prêmio de R$ 500,00.
+            Acompanhe sua posição na competição mensal pelo prêmio de R$ 1.320,00.
           </CardDescription>
         </CardHeader>
         <CardContent>
