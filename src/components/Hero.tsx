@@ -157,6 +157,27 @@ const Hero = () => {
       <div className="absolute bottom-10 right-10 w-32 h-32 bg-accent/20 rounded-full blur-xl animate-pulse delay-1000"></div>
       
       <div className="container mx-auto px-4 relative z-10">
+        {/* Banner de Prêmios Instantâneos */}
+        <div className="mb-6">
+          <Card className="bg-gradient-to-r from-yellow-500 via-orange-500 to-red-500 text-white p-4 border-0 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/20 via-orange-400/20 to-red-400/20 animate-pulse"></div>
+            <div className="relative z-10">
+              <div className="flex items-center justify-center gap-2 text-center">
+                <span className="text-2xl animate-bounce">⭐</span>
+                <div>
+                  <h2 className="text-lg md:text-xl font-bold mb-1">
+                    NOVIDADE: PRÊMIOS INSTANTÂNEOS!
+                  </h2>
+                  <p className="text-sm md:text-base opacity-95">
+                    Fez sua fezinha em um número premiado? <strong>Leva PIX na hora!</strong>
+                  </p>
+                </div>
+                <span className="text-2xl animate-bounce delay-200">💸</span>
+              </div>
+            </div>
+          </Card>
+        </div>
+
         {/* Banner Principal */}
         <Card className="p-6 md:p-8 mb-8 gradient-gold text-white shine-effect hover-lift">
           <div className="text-center">
