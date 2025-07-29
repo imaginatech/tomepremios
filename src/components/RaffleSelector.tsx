@@ -17,6 +17,7 @@ const RaffleSelector = () => {
   const [showPixModal, setShowPixModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [activeRaffleId, setActiveRaffleId] = useState<string | null>(null);
+  const [prizeNumbers, setPrizeNumbers] = useState<number[]>([]);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -82,6 +83,7 @@ const RaffleSelector = () => {
       console.log('Sorteio ativo encontrado, carregando números vendidos...');
       setActiveRaffleId(raffle.id);
       await loadSoldNumbers(raffle.id);
+      await loadPrizeNumbers(raffle.id);
       setIsLoading(false);
     } catch (error) {
       console.error('Erro ao carregar dados do RaffleSelector:', error);
@@ -125,6 +127,30 @@ const RaffleSelector = () => {
         console.log('Finalizando loading...');
         setIsLoading(false);
       }
+    }
+  };
+
+  const loadPrizeNumbers = async (raffleId?: string) => {
+    try {
+      const targetRaffleId = raffleId || activeRaffleId;
+      if (!targetRaffleId) return;
+
+      // Buscar números com prêmios instantâneos não reivindicados
+      const { data, error } = await supabase
+        .from('instant_prizes')
+        .select('ticket_numbers')
+        .eq('raffle_id', targetRaffleId)
+        .eq('claimed', false);
+
+      if (error) {
+        console.error('Erro ao carregar números premiados:', error);
+        return;
+      }
+
+      const prizeNums = data?.flatMap(prize => prize.ticket_numbers) || [];
+      setPrizeNumbers(prizeNums);
+    } catch (error) {
+      console.error('Erro ao carregar números premiados:', error);
     }
   };
 
@@ -219,6 +245,12 @@ const RaffleSelector = () => {
                         <div className="w-4 h-4 bg-muted rounded mr-2"></div>
                         <span>Vendido</span>
                       </div>
+                      <div className="flex items-center">
+                        <div className="w-4 h-4 bg-yellow-500 rounded mr-2 relative">
+                          <span className="absolute inset-0 flex items-center justify-center text-white text-xs">⭐</span>
+                        </div>
+                        <span>Prêmio Instantâneo</span>
+                      </div>
                     </div>
                   </div>
                   {selectedNumbers.length > 0 && (
@@ -239,6 +271,7 @@ const RaffleSelector = () => {
                     {allNumbers.map(number => {
                       const isSelected = selectedNumbers.includes(number);
                       const isSold = soldNumbers.includes(number);
+                      const hasPrize = prizeNumbers.includes(number);
                       
                       return (
                         <button
@@ -246,10 +279,14 @@ const RaffleSelector = () => {
                           onClick={() => toggleNumber(number)}
                           className={`title-number ${
                             isSold ? 'sold' : isSelected ? 'selected' : 'available'
-                          }`}
+                          } ${hasPrize && !isSold ? 'has-prize' : ''}`}
                           disabled={isSold}
+                          title={hasPrize && !isSold ? "Este número tem prêmio instantâneo! ⭐" : ""}
                         >
                           {String(number).padStart(3, '0')}
+                          {hasPrize && !isSold && (
+                            <span className="absolute top-0 right-0 text-yellow-500 text-xs">⭐</span>
+                          )}
                         </button>
                       );
                     })}

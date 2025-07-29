@@ -136,6 +136,45 @@ export type Database = {
           },
         ]
       }
+      instant_prizes: {
+        Row: {
+          claimed: boolean
+          claimed_at: string | null
+          claimed_by: string | null
+          created_at: string
+          id: string
+          prize_amount: number
+          prize_description: string
+          raffle_id: string
+          ticket_numbers: number[]
+          updated_at: string
+        }
+        Insert: {
+          claimed?: boolean
+          claimed_at?: string | null
+          claimed_by?: string | null
+          created_at?: string
+          id?: string
+          prize_amount: number
+          prize_description?: string
+          raffle_id: string
+          ticket_numbers: number[]
+          updated_at?: string
+        }
+        Update: {
+          claimed?: boolean
+          claimed_at?: string | null
+          claimed_by?: string | null
+          created_at?: string
+          id?: string
+          prize_amount?: number
+          prize_description?: string
+          raffle_id?: string
+          ticket_numbers?: number[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       monthly_affiliate_winners: {
         Row: {
           affiliate_id: string

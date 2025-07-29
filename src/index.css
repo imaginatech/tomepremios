@@ -193,6 +193,29 @@
   cursor: not-allowed;
 }
 
+.title-number.has-prize {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b, #d97706);
+  color: white;
+  box-shadow: 0 2px 12px rgba(251, 191, 36, 0.5);
+  position: relative;
+}
+
+.title-number.has-prize::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shine 2s infinite;
+}
+
+.title-number.has-prize:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 16px rgba(251, 191, 36, 0.7);
+}
+
 .title-number:hover:not(.sold) {
   transform: scale(1.05);
 }

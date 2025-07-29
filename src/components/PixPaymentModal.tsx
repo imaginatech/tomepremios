@@ -32,6 +32,7 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
     qr_code_image: string;
     payment_id: string;
   } | null>(null);
+  const [instantPrize, setInstantPrize] = useState<any>(null);
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -133,6 +134,10 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
         if (data.status === 'paid') {
           clearInterval(pollInterval);
           setPaymentStatus('confirmed');
+          
+          // Verificar se há prêmio instantâneo
+          await checkInstantPrize();
+          
           triggerConfetti();
           toast({
             title: "Pagamento Confirmado! 🎉",
@@ -152,6 +157,45 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
     setTimeout(() => {
       clearInterval(pollInterval);
     }, 10 * 60 * 1000);
+  };
+
+  const checkInstantPrize = async () => {
+    try {
+      // Buscar prêmios instantâneos para os números comprados
+      const { data: prizes } = await supabase
+        .from('instant_prizes')
+        .select('*')
+        .contains('ticket_numbers', selectedNumbers)
+        .eq('claimed', false);
+
+      if (prizes && prizes.length > 0) {
+        const prize = prizes[0]; // Pegar o primeiro prêmio encontrado
+        
+        // Marcar como reivindicado
+        await supabase
+          .from('instant_prizes')
+          .update({
+            claimed: true,
+            claimed_by: user?.id,
+            claimed_at: new Date().toISOString()
+          })
+          .eq('id', prize.id);
+
+        setInstantPrize(prize);
+        
+        // Confete extra para prêmio instantâneo
+        setTimeout(() => {
+          confetti({
+            particleCount: 200,
+            spread: 100,
+            origin: { y: 0.4 },
+            colors: ['#FFD700', '#FFA500', '#FF6347']
+          });
+        }, 500);
+      }
+    } catch (error) {
+      console.error('Erro ao verificar prêmio instantâneo:', error);
+    }
   };
 
   const copyPixCode = () => {
@@ -191,6 +235,28 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
                 Seus números foram reservados e você está participando do sorteio!
               </p>
             </div>
+
+            {instantPrize && (
+              <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-lg p-4">
+                <div className="flex items-center justify-center mb-2">
+                  <span className="text-2xl">🎉</span>
+                  <h4 className="text-xl font-bold text-yellow-800 mx-2">PARABÉNS!</h4>
+                  <span className="text-2xl">🎉</span>
+                </div>
+                <p className="text-yellow-900 font-medium mb-2">
+                  Você ganhou um prêmio instantâneo!
+                </p>
+                <div className="text-2xl font-bold text-green-600 mb-2">
+                  R$ {instantPrize.prize_amount.toFixed(2)}
+                </div>
+                <p className="text-sm text-yellow-700">
+                  {instantPrize.prize_description}
+                </p>
+                <p className="text-xs text-yellow-600 mt-2">
+                  Números premiados: {instantPrize.ticket_numbers.filter((n: number) => selectedNumbers.includes(n)).map((n: number) => n.toString().padStart(3, '0')).join(', ')}
+                </p>
+              </div>
+            )}
 
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <h4 className="font-medium text-green-800 mb-2">Números Reservados:</h4>
