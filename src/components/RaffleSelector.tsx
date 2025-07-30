@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { ShoppingCart, Trash2, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -127,6 +128,7 @@ const RaffleSelector = () => {
       }
     }
   };
+
 
   // Gerar números de 1 a 200
   const allNumbers = Array.from({ length: 200 }, (_, i) => i + 1);
