@@ -97,32 +97,54 @@ export function InstantPrizesManagement() {
         // Carregar ganhadores dos prêmios instantâneos
         const { data: winnersData } = await supabase
           .from('instant_prizes')
-          .select('id, prize_amount, prize_description, ticket_numbers, claimed_at, claimed_by')
+          .select('id, prize_amount, prize_description, claimed_at, claimed_by')
           .eq('raffle_id', raffleData.id)
           .eq('claimed', true)
           .order('claimed_at', { ascending: false });
 
         if (winnersData && winnersData.length > 0) {
-          // Buscar informações dos usuários separadamente
+          // Buscar informações dos usuários e números comprados
           const userIds = winnersData.map(w => w.claimed_by).filter(Boolean);
           const { data: usersData } = await supabase
             .from('profiles')
             .select('id, full_name, whatsapp')
             .in('id', userIds);
 
-          const formattedWinners = winnersData.map(winner => {
+          // Para cada ganhador, buscar apenas os números que ele comprou
+          const formattedWinners = await Promise.all(winnersData.map(async (winner) => {
             const userInfo = usersData?.find(u => u.id === winner.claimed_by);
+            
+            // Buscar números comprados pelo usuário que fazem parte do prêmio
+            const { data: userTickets } = await supabase
+              .from('raffle_tickets')
+              .select('ticket_number')
+              .eq('user_id', winner.claimed_by)
+              .eq('raffle_id', raffleData.id)
+              .eq('payment_status', 'paid');
+            
+            // Buscar números do prêmio
+            const { data: prizeData } = await supabase
+              .from('instant_prizes')
+              .select('ticket_numbers')
+              .eq('id', winner.id)
+              .single();
+            
+            // Filtrar apenas números que o usuário comprou E estão no prêmio
+            const userNumbers = userTickets?.map(t => t.ticket_number) || [];
+            const prizeNumbers = prizeData?.ticket_numbers || [];
+            const wonNumbers = userNumbers.filter(num => prizeNumbers.includes(num));
+            
             return {
               id: winner.id,
               prize_amount: winner.prize_amount,
               prize_description: winner.prize_description,
-              ticket_numbers: winner.ticket_numbers,
+              ticket_numbers: wonNumbers,
               claimed_at: winner.claimed_at!,
               claimed_by: winner.claimed_by!,
               winner_name: userInfo?.full_name || 'Nome não informado',
               winner_whatsapp: userInfo?.whatsapp || 'WhatsApp não informado'
             };
-          });
+          }));
 
           setWinners(formattedWinners);
         } else {
