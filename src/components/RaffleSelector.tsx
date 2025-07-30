@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 const RaffleSelector = () => {
+  console.log('RaffleSelector component loaded - version without prizeNumbers');
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [soldNumbers, setSoldNumbers] = useState<number[]>([]);
   const [showAuthModal, setShowAuthModal] = useState(false);
