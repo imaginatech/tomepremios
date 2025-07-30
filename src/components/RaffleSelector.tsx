@@ -245,12 +245,6 @@ const RaffleSelector = () => {
                         <div className="w-4 h-4 bg-muted rounded mr-2"></div>
                         <span>Vendido</span>
                       </div>
-                      <div className="flex items-center">
-                        <div className="w-4 h-4 bg-yellow-500 rounded mr-2 relative">
-                          <span className="absolute inset-0 flex items-center justify-center text-white text-xs">⭐</span>
-                        </div>
-                        <span>Prêmio Instantâneo</span>
-                      </div>
                     </div>
                   </div>
                   {selectedNumbers.length > 0 && (
