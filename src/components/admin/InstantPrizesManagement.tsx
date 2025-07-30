@@ -462,7 +462,7 @@ export function InstantPrizesManagement() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {winner.ticket_numbers.map(num => (
+                        {(winner.ticket_numbers || []).map(num => (
                           <Badge key={num} variant="secondary" className="text-xs">
                             {num.toString().padStart(3, '0')}
                           </Badge>
