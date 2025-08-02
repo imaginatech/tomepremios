@@ -20,18 +20,18 @@ const ResetPassword = () => {
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    // Verificar se temos os tokens necessários na URL
-    const accessToken = searchParams.get('access_token');
-    const refreshToken = searchParams.get('refresh_token');
+    // Verificar se temos os parâmetros necessários na URL
+    const token = searchParams.get('token');
+    const type = searchParams.get('type');
     
-    if (accessToken && refreshToken) {
-      // Definir a sessão com os tokens da URL
-      supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken
+    if (token && type === 'recovery') {
+      // Verificar o token de recuperação
+      supabase.auth.verifyOtp({
+        token_hash: token,
+        type: 'recovery'
       }).then(({ error }) => {
         if (error) {
-          console.error('Erro ao definir sessão:', error);
+          console.error('Erro ao verificar token:', error);
           toast.error('Link inválido ou expirado');
           navigate('/');
         } else {
