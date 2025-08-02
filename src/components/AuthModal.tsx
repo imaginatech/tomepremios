@@ -16,6 +16,7 @@ interface AuthModalProps {
 
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, affiliateCode: propAffiliateCode }) => {
   const [isLogin, setIsLogin] = useState(true);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -24,7 +25,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, affil
   const [loading, setLoading] = useState(false);
   const [affiliateCode, setAffiliateCode] = useState('');
   const [whatsappError, setWhatsappError] = useState('');
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, resetPassword } = useAuth();
   const { toast } = useToast();
 
   // Verificar se há código de afiliado na URL ou recebido como prop
@@ -114,6 +115,27 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, affil
     setLoading(true);
 
     try {
+      // Se for recuperação de senha
+      if (isForgotPassword) {
+        const { error } = await resetPassword(email);
+        
+        if (error) {
+          toast({
+            title: "Erro",
+            description: "Erro ao enviar email de recuperação. Verifique se o email está correto.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Email enviado!",
+            description: "Verifique sua caixa de entrada para redefinir sua senha.",
+          });
+          setIsForgotPassword(false);
+          setIsLogin(true);
+        }
+        return;
+      }
+
       if (!isLogin && password !== confirmPassword) {
         toast({
           title: "Erro",
@@ -258,7 +280,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, affil
       <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6 animate-fade-in">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold golden-text">
-            {isLogin ? 'Entrar' : 'Cadastrar'}
+            {isForgotPassword ? 'Recuperar Senha' : isLogin ? 'Entrar' : 'Cadastrar'}
           </h2>
           <Button
             variant="ghost"
@@ -286,7 +308,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, affil
             </div>
           </div>
 
-          {!isLogin && (
+          {isForgotPassword && (
+            <p className="text-sm text-muted-foreground">
+              Digite seu email para receber um link de recuperação de senha.
+            </p>
+          )}
+
+          {!isLogin && !isForgotPassword && (
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">Nome Completo</label>
               <div className="relative">
@@ -303,7 +331,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, affil
             </div>
           )}
 
-          {!isLogin && (
+          {!isLogin && !isForgotPassword && (
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">WhatsApp</label>
               <div className="relative">
@@ -324,23 +352,25 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, affil
             </div>
           )}
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Senha</label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pl-10"
-                required
-                minLength={6}
-              />
+          {!isForgotPassword && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Senha</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pl-10"
+                  required
+                  minLength={6}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
-          {!isLogin && (
+          {!isLogin && !isForgotPassword && (
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">Confirmar Senha</label>
               <div className="relative">
@@ -358,7 +388,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, affil
             </div>
           )}
 
-          {!isLogin && (
+          {!isLogin && !isForgotPassword && (
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">Código de Indicação (opcional)</label>
               <div className="relative">
@@ -388,21 +418,48 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, affil
             ) : (
               <User className="w-4 h-4 mr-2" />
             )}
-            {loading ? 'Aguarde...' : isLogin ? 'Entrar' : 'Cadastrar'}
+            {loading ? 'Aguarde...' : isForgotPassword ? 'Enviar Email' : isLogin ? 'Entrar' : 'Cadastrar'}
           </Button>
         </form>
 
-        <div className="mt-4 text-center">
-          <p className="text-sm text-muted-foreground">
-            {isLogin ? 'Não tem uma conta?' : 'Já tem uma conta?'}
-          </p>
-          <Button
-            variant="link"
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-primary hover:text-primary/80"
-          >
-            {isLogin ? 'Cadastre-se' : 'Faça login'}
-          </Button>
+        <div className="mt-4 text-center space-y-2">
+          {!isForgotPassword && (
+            <>
+              <p className="text-sm text-muted-foreground">
+                {isLogin ? 'Não tem uma conta?' : 'Já tem uma conta?'}
+              </p>
+              <Button
+                variant="link"
+                onClick={() => setIsLogin(!isLogin)}
+                className="text-primary hover:text-primary/80"
+              >
+                {isLogin ? 'Cadastre-se' : 'Faça login'}
+              </Button>
+            </>
+          )}
+          
+          {isLogin && !isForgotPassword && (
+            <Button
+              variant="link"
+              onClick={() => setIsForgotPassword(true)}
+              className="text-muted-foreground hover:text-foreground text-xs"
+            >
+              Esqueceu sua senha?
+            </Button>
+          )}
+          
+          {isForgotPassword && (
+            <Button
+              variant="link"
+              onClick={() => {
+                setIsForgotPassword(false);
+                setIsLogin(true);
+              }}
+              className="text-primary hover:text-primary/80"
+            >
+              Voltar ao login
+            </Button>
+          )}
         </div>
       </div>
     </div>
