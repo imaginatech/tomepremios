@@ -9,8 +9,8 @@ max_rows = 1000
 
 [auth]
 enabled = true
-site_url = "https://lovable.app"
-additional_redirect_urls = ["https://localhost:3000", "https://lovable.app"]
+site_url = "https://tomepremios.com.br"
+additional_redirect_urls = ["https://localhost:3000", "https://lovable.app", "https://tomepremios.com.br"]
 jwt_expiry = 3600
 refresh_token_rotation_enabled = true
 refresh_token_reuse_interval = 10
