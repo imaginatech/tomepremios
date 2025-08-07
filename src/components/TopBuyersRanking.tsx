@@ -192,7 +192,7 @@ const TopBuyersRanking = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Trophy className="w-5 h-5" />
-              Top 3 Compradores
+              Top Compradores
             </CardTitle>
             <CardDescription>
               Ranking dos participantes que mais compraram cotas na edição ativa
