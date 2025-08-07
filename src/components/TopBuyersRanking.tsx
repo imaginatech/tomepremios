@@ -197,7 +197,7 @@ const TopBuyersRanking = () => {
             <CardDescription>
               Ranking dos participantes que mais compraram cotas na edição ativa
               <br />
-              <span className="text-primary font-medium">🏆 Quem comprar mais até sábado (09/08) ganha almoço no Restaurante Serrado!</span>
+              <span className="text-primary font-medium">🏆 Quem comprar mais até sábado (09/08) ganha almoço no Restaurante Serrano!</span>
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -271,7 +271,7 @@ const TopBuyersRanking = () => {
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li>• Compre cotas na edição atual para participar do ranking</li>
                 <li>• Quanto mais cotas, melhor sua posição</li>
-                <li>• O 1º lugar até sábado (09/08) ganha almoço no Restaurante Serrado</li>
+                <li>• O 1º lugar até sábado (09/08) ganha almoço no Restaurante Serrano</li>
                 <li>• Prêmio será entregue no domingo (10/08)</li>
               </ul>
             </div>
