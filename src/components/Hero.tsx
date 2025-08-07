@@ -169,7 +169,7 @@ const Hero = () => {
                     NOVIDADE: TOP COMPRADOR!
                   </h2>
                   <p className="text-sm md:text-base opacity-95">
-                    Quem comprar mais cotas até sábado (09/08) vai ganhar um <strong>almoço incrível no Restaurante Serrado no Domingo (10/08)</strong>. Corre!
+                    Quem comprar mais cotas, ganha prêmios incríveis!
                   </p>
                 </div>
                 <span className="text-2xl animate-bounce delay-200">💸</span>
