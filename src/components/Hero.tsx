@@ -165,7 +165,7 @@ const Hero = () => {
               <div className="flex items-center justify-center gap-2 text-center">
                 <span className="text-2xl animate-bounce">⭐</span>
                 <div>
-                  <h2 className="text-lg md:text-xl font-bold mb-1">
+                  <h2 className="text-lg md:text-xl font-bold mb-1 whitespace-nowrap">
                     NOVIDADE: TOP COMPRADOR!
                   </h2>
                   <p className="text-sm md:text-base opacity-95">
