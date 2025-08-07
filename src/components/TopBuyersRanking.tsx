@@ -1,24 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, Medal, Award } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Trophy, Crown, Award, AlertCircle, RefreshCw, Ticket } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 
 interface TopBuyer {
   user_id: string;
   full_name: string;
   total_tickets: number;
-  position: number;
+  rank: number;
 }
 
 const TopBuyersRanking = () => {
   const [topBuyers, setTopBuyers] = useState<TopBuyer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadTopBuyers();
   }, []);
 
   const loadTopBuyers = async () => {
+    setIsLoading(true);
+    setError(null);
+    
     try {
       console.log('Carregando ranking de top compradores...');
       
@@ -31,6 +37,7 @@ const TopBuyersRanking = () => {
 
       if (!activeRaffle) {
         console.log('Nenhum sorteio ativo encontrado');
+        setTopBuyers([]);
         setIsLoading(false);
         return;
       }
@@ -47,8 +54,7 @@ const TopBuyersRanking = () => {
 
       if (error) {
         console.error('Erro ao buscar ranking:', error);
-        setIsLoading(false);
-        return;
+        throw error;
       }
 
       // Agrupar e contar tickets por usuário
@@ -67,47 +73,35 @@ const TopBuyersRanking = () => {
         return acc;
       }, {});
 
-      // Converter para array e ordenar
+      // Converter para array, ordenar e pegar apenas os top 3
       const sortedBuyers = Object.values(buyerCounts || {})
         .sort((a: any, b: any) => b.total_tickets - a.total_tickets)
-        .slice(0, 5) // Top 5
+        .slice(0, 3) // Top 3
         .map((buyer: any, index: number) => ({
           ...buyer,
-          position: index + 1
+          rank: index + 1
         }));
 
-      console.log('Top compradores carregados:', sortedBuyers);
+      console.log('Top 3 compradores carregados:', sortedBuyers);
       setTopBuyers(sortedBuyers);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao carregar top compradores:', error);
+      setError(error.message || 'Erro desconhecido');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const getPositionIcon = (position: number) => {
-    switch (position) {
+  const getRankIcon = (rank: number) => {
+    switch (rank) {
       case 1:
-        return <Trophy className="w-6 h-6 text-yellow-500" />;
+        return <Crown className="w-5 h-5 text-yellow-500" />;
       case 2:
-        return <Medal className="w-6 h-6 text-gray-400" />;
+        return <Award className="w-5 h-5 text-gray-400" />;
       case 3:
-        return <Award className="w-6 h-6 text-amber-600" />;
+        return <Trophy className="w-5 h-5 text-amber-600" />;
       default:
-        return <span className="w-6 h-6 flex items-center justify-center text-lg font-bold text-primary">{position}</span>;
-    }
-  };
-
-  const getPositionColor = (position: number) => {
-    switch (position) {
-      case 1:
-        return 'bg-gradient-to-r from-yellow-400 to-yellow-600';
-      case 2:
-        return 'bg-gradient-to-r from-gray-300 to-gray-500';
-      case 3:
-        return 'bg-gradient-to-r from-amber-400 to-amber-600';
-      default:
-        return 'bg-gradient-to-r from-primary/20 to-primary/40';
+        return <Badge variant="outline" className="w-6 h-6 rounded-full p-0 flex items-center justify-center">{rank}</Badge>;
     }
   };
 
@@ -115,38 +109,56 @@ const TopBuyersRanking = () => {
     return (
       <section className="py-8">
         <div className="container mx-auto px-4">
-          <Card className="p-6">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold mb-4 flex items-center justify-center gap-2">
-                <Trophy className="w-6 h-6 text-primary" />
-                TOP COMPRADORES
-              </h2>
-              <div className="animate-pulse space-y-3">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="h-12 bg-muted rounded-lg"></div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Trophy className="w-5 h-5" />
+                Top 3 Compradores
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg animate-pulse">
+                    <div className="w-8 h-8 bg-muted rounded-full"></div>
+                    <div className="flex-1">
+                      <div className="h-4 bg-muted rounded w-32 mb-1"></div>
+                      <div className="h-3 bg-muted rounded w-24"></div>
+                    </div>
+                    <div className="h-6 bg-muted rounded w-16"></div>
+                  </div>
                 ))}
               </div>
-            </div>
+            </CardContent>
           </Card>
         </div>
       </section>
     );
   }
 
-  if (topBuyers.length === 0) {
+  if (error) {
     return (
       <section className="py-8">
         <div className="container mx-auto px-4">
-          <Card className="p-6">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold mb-4 flex items-center justify-center gap-2">
-                <Trophy className="w-6 h-6 text-primary" />
-                TOP COMPRADORES
-              </h2>
-              <p className="text-muted-foreground">
-                Seja o primeiro a participar e apareça no ranking!
-              </p>
-            </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Trophy className="w-5 h-5" />
+                Top 3 Compradores
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
+                <p className="text-destructive mb-4">
+                  Erro ao carregar ranking: {error}
+                </p>
+                <Button onClick={loadTopBuyers} variant="outline" className="flex items-center gap-2">
+                  <RefreshCw className="w-4 h-4" />
+                  Tentar Novamente
+                </Button>
+              </div>
+            </CardContent>
           </Card>
         </div>
       </section>
@@ -156,56 +168,94 @@ const TopBuyersRanking = () => {
   return (
     <section className="py-8">
       <div className="container mx-auto px-4">
-        <Card className="p-6">
-          <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold mb-2 flex items-center justify-center gap-2">
-              <Trophy className="w-6 h-6 text-primary" />
-              TOP COMPRADORES
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Ranking dos participantes que mais compraram cotas
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            {topBuyers.map((buyer) => (
-              <div
-                key={buyer.user_id}
-                className={`
-                  flex items-center justify-between p-4 rounded-lg
-                  ${getPositionColor(buyer.position)} text-white
-                  hover:scale-105 transition-transform duration-200
-                  ${buyer.position <= 3 ? 'shine-effect' : ''}
-                `}
-              >
-                <div className="flex items-center gap-3">
-                  {getPositionIcon(buyer.position)}
-                  <div>
-                    <p className="font-semibold text-lg">
-                      {buyer.full_name}
-                    </p>
-                    <p className="text-sm opacity-90">
-                      {buyer.position}º lugar
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold">
-                    {buyer.total_tickets}
-                  </p>
-                  <p className="text-sm opacity-90">
-                    {buyer.total_tickets === 1 ? 'cota' : 'cotas'}
-                  </p>
-                </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="w-5 h-5" />
+              Top 3 Compradores
+            </CardTitle>
+            <CardDescription>
+              Ranking dos participantes que mais compraram cotas na edição ativa
+              <br />
+              <span className="text-primary font-medium">🏆 Quem comprar mais até sábado (09/08) ganha almoço no Restaurante Serrado!</span>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {topBuyers.length === 0 ? (
+              <div className="text-center py-8">
+                <Ticket className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  Nenhuma compra registrada ainda.
+                </p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Seja o primeiro a comprar cotas e apareça no ranking!
+                </p>
+                <Button onClick={loadTopBuyers} variant="outline" size="sm" className="mt-4">
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Atualizar
+                </Button>
               </div>
-            ))}
-          </div>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-muted-foreground">
-              🏆 Quanto mais cotas, maior sua chance de ganhar e melhor sua posição no ranking!
-            </p>
-          </div>
+            ) : (
+              <div className="space-y-3">
+                {topBuyers.map((buyer) => (
+                  <div
+                    key={buyer.user_id}
+                    className={`flex items-center gap-4 p-4 rounded-lg border transition-colors ${
+                      buyer.rank === 1 
+                        ? 'bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-200 dark:from-yellow-950 dark:to-yellow-900 dark:border-yellow-800' 
+                        : 'bg-muted/50 hover:bg-muted'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center">
+                      {getRankIcon(buyer.rank)}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <p className={`font-medium truncate ${buyer.rank === 1 ? 'text-black' : 'text-foreground'}`}>
+                        {buyer.full_name}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {buyer.rank}º lugar
+                      </p>
+                    </div>
+                    
+                    <div className="text-right">
+                      <div className="flex items-center gap-1">
+                        <Ticket className="w-4 h-4 text-muted-foreground" />
+                        <span className={`font-bold text-lg ${buyer.rank === 1 ? 'text-black' : ''}`}>
+                          {buyer.total_tickets}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        cota{buyer.total_tickets !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                    
+                    {buyer.rank === 1 && (
+                      <div className="text-center">
+                        <Badge variant="default" className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-black">
+                          Líder
+                        </Badge>
+                        <p className="text-xs text-black font-medium mt-1">
+                          Almoço grátis
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            <div className="mt-6 p-4 bg-primary/5 rounded-lg border border-primary/20">
+              <h4 className="font-medium text-primary mb-2">Como funciona?</h4>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• Compre cotas na edição atual para participar do ranking</li>
+                <li>• Quanto mais cotas, melhor sua posição</li>
+                <li>• O 1º lugar até sábado (09/08) ganha almoço no Restaurante Serrado</li>
+                <li>• Prêmio será entregue no domingo (10/08)</li>
+              </ul>
+            </div>
+          </CardContent>
         </Card>
       </div>
     </section>
