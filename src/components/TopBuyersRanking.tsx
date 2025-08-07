@@ -43,41 +43,61 @@ const TopBuyersRanking = () => {
       }
 
       // Buscar ranking dos compradores com mais tickets
-      const { data: buyers, error } = await supabase
+      const { data: tickets, error: ticketsError } = await supabase
         .from('raffle_tickets')
-        .select(`
-          user_id,
-          profiles!inner(full_name)
-        `)
+        .select('user_id')
         .eq('raffle_id', activeRaffle.id)
         .eq('payment_status', 'paid');
 
-      if (error) {
-        console.error('Erro ao buscar ranking:', error);
-        throw error;
+      if (ticketsError) {
+        console.error('Erro ao buscar tickets:', ticketsError);
+        throw ticketsError;
       }
 
-      // Agrupar e contar tickets por usuário
-      const buyerCounts = buyers?.reduce((acc: any, ticket: any) => {
+      if (!tickets || tickets.length === 0) {
+        console.log('Nenhum ticket pago encontrado');
+        setTopBuyers([]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Agrupar tickets por usuário
+      const buyerCounts = tickets.reduce((acc: any, ticket: any) => {
         const userId = ticket.user_id;
-        const fullName = ticket.profiles?.full_name || 'Usuário';
-        
         if (!acc[userId]) {
-          acc[userId] = {
-            user_id: userId,
-            full_name: fullName,
-            total_tickets: 0
-          };
+          acc[userId] = 0;
         }
-        acc[userId].total_tickets++;
+        acc[userId]++;
         return acc;
       }, {});
 
-      // Converter para array, ordenar e pegar apenas os top 3
-      const sortedBuyers = Object.values(buyerCounts || {})
-        .sort((a: any, b: any) => b.total_tickets - a.total_tickets)
-        .slice(0, 3) // Top 3
-        .map((buyer: any, index: number) => ({
+      // Buscar nomes dos usuários
+      const userIds = Object.keys(buyerCounts);
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', userIds);
+
+      if (profilesError) {
+        console.error('Erro ao buscar profiles:', profilesError);
+        throw profilesError;
+      }
+
+      // Criar array com dados completos dos compradores
+      const buyersWithProfiles = userIds.map(userId => {
+        const profile = profiles?.find(p => p.id === userId);
+        return {
+          user_id: userId,
+          full_name: profile?.full_name || 'Usuário',
+          total_tickets: buyerCounts[userId]
+        };
+      });
+
+      // Ordenar e pegar apenas os top 3
+      const sortedBuyers = buyersWithProfiles
+        .sort((a, b) => b.total_tickets - a.total_tickets)
+        .slice(0, 3)
+        .map((buyer, index) => ({
           ...buyer,
           rank: index + 1
         }));
