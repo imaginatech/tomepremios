@@ -166,10 +166,10 @@ const Hero = () => {
                 <span className="text-2xl animate-bounce">⭐</span>
                 <div>
                   <h2 className="text-lg md:text-xl font-bold mb-1">
-                    NOVIDADE: PRÊMIOS INSTANTÂNEOS!
+                    NOVIDADE: TOP COMPRADOR!
                   </h2>
                   <p className="text-sm md:text-base opacity-95">
-                    Fez sua fezinha em um número premiado? <strong>Leva PIX na hora!</strong>
+                    Quem comprar mais cotas até sábado (09/08) vai ganhar um <strong>almoço incrível no Restaurante Serrado no Domingo (10/08)</strong>. Corre!
                   </p>
                 </div>
                 <span className="text-2xl animate-bounce delay-200">💸</span>
