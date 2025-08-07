@@ -257,7 +257,7 @@ const TopBuyersRanking = () => {
                           Líder
                         </Badge>
                         <p className="text-xs text-black font-medium mt-1">
-                          Almoço grátis
+                          Ganhando
                         </p>
                       </div>
                     )}
