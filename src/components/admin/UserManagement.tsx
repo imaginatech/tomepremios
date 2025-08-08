@@ -16,7 +16,8 @@ import {
   Trophy,
   Eye,
   Filter,
-  Trash2
+  Trash2,
+  Download
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -56,6 +57,7 @@ const UserManagement = () => {
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [showUserDetails, setShowUserDetails] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -236,6 +238,58 @@ const UserManagement = () => {
     return <Badge variant="secondary">Usuário</Badge>;
   };
 
+  const handleExportCSV = async () => {
+    try {
+      setExporting(true);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('full_name, whatsapp')
+        .not('whatsapp', 'is', null)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      const rows = (data || []) as { full_name: string | null; whatsapp: string | null }[];
+      const header = ['Nome', 'WhatsApp'];
+      const csv = [
+        header.join(';'),
+        ...rows.map((r) => {
+          const name = (r.full_name || '(Sem nome)').replace(/"/g, '""');
+          const wa = (r.whatsapp || '').replace(/"/g, '""');
+          return `"${name}";"${wa}"`;
+        })
+      ].join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      link.href = url;
+      link.setAttribute('download', `contatos_${yyyy}-${mm}-${dd}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: 'Exportação concluída',
+        description: `Exportados ${rows.length} contatos.`,
+      });
+    } catch (error) {
+      console.error('Erro ao exportar CSV:', error);
+      toast({
+        title: 'Erro ao exportar',
+        description: 'Tente novamente em instantes.',
+        variant: 'destructive',
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -258,6 +312,10 @@ const UserManagement = () => {
               className="pl-10 w-64"
             />
           </div>
+          <Button variant="secondary" onClick={handleExportCSV} disabled={exporting}>
+            <Download className="w-4 h-4 mr-2" />
+            {exporting ? 'Exportando...' : 'Exportar CSV'}
+          </Button>
         </div>
       </div>
 
