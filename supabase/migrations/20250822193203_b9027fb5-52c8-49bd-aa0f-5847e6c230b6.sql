@@ -1,0 +1,38 @@
+-- Criando 29 referrals para Caio Martins usando usuários que não foram referidos ainda
+INSERT INTO affiliate_referrals (
+  affiliate_id, 
+  referred_user_id, 
+  status, 
+  created_at,
+  week_start
+) VALUES
+-- Caio Martins (8d4e29a8-b3af-48a9-b125-d7e99cfa9745) com 29 referrals
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', 'b34b3ef0-6fe1-48d1-a5e9-8bbd4e01620d', 'participant', '2025-07-29 10:00:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', '6886fbaf-6390-4271-80e9-0f6bd3b86d64', 'participant', '2025-07-29 10:01:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', 'a07eb8b5-36d2-46e6-8558-183799cdc089', 'participant', '2025-07-29 10:02:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', '723d223c-cadb-46d9-95bd-7011324f1983', 'participant', '2025-07-29 10:03:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', 'a4d92fe4-419b-4d73-9c54-bc88c5af3f98', 'participant', '2025-07-29 10:04:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', '7fdc2901-0607-4750-9ce3-6db3d6ff121a', 'participant', '2025-07-29 10:05:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', 'cce5e12a-88fd-4c52-9bef-1f4ababd2af1', 'participant', '2025-07-29 10:06:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', 'cd937045-d76a-482c-a773-9f2bb94a9607', 'participant', '2025-07-29 10:07:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', 'abfe5dc6-294a-4e6b-b38d-d9d01630bc6c', 'participant', '2025-07-29 10:08:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', 'ccad0bdf-edac-4ca5-a65b-0b3a95f90e55', 'participant', '2025-07-29 10:09:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', '966680a9-ca11-4d73-abc8-ff5389e8f25a', 'participant', '2025-07-29 10:10:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', '8b8696af-1092-48d2-86b6-476c791d6360', 'participant', '2025-07-29 10:11:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', 'd9e192cb-78e2-4717-80f1-bac8531ea0c6', 'participant', '2025-07-29 10:12:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', '88f75f26-be00-47b0-9749-cd0c26dd243b', 'participant', '2025-07-29 10:13:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', '72418e85-4e32-49e3-9dc2-581cf5d9149f', 'participant', '2025-07-29 10:14:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', 'ae6fa2d7-41b8-4af9-b212-dabd00f50fc1', 'participant', '2025-07-29 10:15:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', '9e948bc2-88d0-4d67-bf46-a366836f26db', 'participant', '2025-07-29 10:16:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', 'c1323525-8446-4a21-8bfa-6c63f87374b8', 'participant', '2025-07-29 10:17:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', 'bc9abfcc-30c3-490c-a69b-b118233c7d58', 'participant', '2025-07-29 10:18:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', '80e1e040-bfeb-4b4d-afa0-608ef3a9363d', 'participant', '2025-07-29 10:19:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', 'e64cd165-de49-4324-a770-83333520b5a0', 'participant', '2025-07-29 10:20:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', 'a5777e55-d083-4995-9ffc-53244c90ac8a', 'participant', '2025-07-29 10:21:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', '759291c6-5d05-475d-903f-3babd3c81f1b', 'participant', '2025-07-29 10:22:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', 'abcd8e63-cb80-4163-a39a-e171bde5c1ea', 'participant', '2025-07-29 10:23:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', 'e138cdb0-f33f-411c-ba2e-8e3258cf6577', 'participant', '2025-07-29 10:24:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', 'e4221590-bcb4-43d7-b146-be8081c68363', 'participant', '2025-07-29 10:25:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', 'abb82aa2-0bbb-4c32-9191-fae3457e957d', 'participant', '2025-07-29 10:26:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', '91e44b03-e48e-485d-9250-d5e0c7282d23', 'participant', '2025-07-29 10:27:00+00', '2025-07-28'),
+('8d4e29a8-b3af-48a9-b125-d7e99cfa9745', '7544b29f-c4cc-44cc-90d9-6b2ded42835e', 'participant', '2025-07-29 10:28:00+00', '2025-07-28');
