@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -431,9 +431,9 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: {
           action_type: string
-          user_id: string
           affiliate_code: string
           message: string
+          user_id: string
         }[]
       }
       generate_affiliate_code: {
@@ -447,11 +447,11 @@ export type Database = {
       get_affiliate_rankings: {
         Args: Record<PropertyKey, never>
         Returns: {
-          affiliate_id: string
           affiliate_code: string
+          affiliate_id: string
+          first_referral_date: string
           full_name: string
           referrals_count: number
-          first_referral_date: string
         }[]
       }
       get_current_user_role: {
@@ -459,11 +459,11 @@ export type Database = {
         Returns: string
       }
       process_affiliate_referral: {
-        Args: { p_referred_user_id: string; p_affiliate_code: string }
+        Args: { p_affiliate_code: string; p_referred_user_id: string }
         Returns: boolean
       }
       reserve_numbers: {
-        Args: { p_user_id: string; p_numbers: number[] }
+        Args: { p_numbers: number[]; p_user_id: string }
         Returns: boolean
       }
     }
