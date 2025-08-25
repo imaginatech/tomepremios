@@ -5,6 +5,14 @@ import { Trophy, Calendar, TrendingUp } from 'lucide-react';
 const AffiliateWinners = () => {
   const affiliateWinners = [
     {
+      name: "Caio Martins",
+      code: "#EF6AF08C",
+      period: "Janeiro 2025",
+      referrals: 58,
+      prize: "1 salário",
+      date: "25 Jan 2025"
+    },
+    {
       name: "Weverson Armani",
       period: "Janeiro 2025",
       referrals: 34,
