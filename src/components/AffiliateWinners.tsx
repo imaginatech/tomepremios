@@ -14,7 +14,7 @@ const AffiliateWinners = () => {
     },
     {
       name: "Weverson Armani",
-      period: "Agosto 2025",
+      period: "Julho 2025",
       referrals: 34,
       prize: "1 salário",
       date: "25 Ago 2025"
