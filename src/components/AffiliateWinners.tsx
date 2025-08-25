@@ -7,17 +7,17 @@ const AffiliateWinners = () => {
     {
       name: "Caio Martins",
       code: "#EF6AF08C",
-      period: "Janeiro 2025",
+      period: "Agosto 2025",
       referrals: 58,
       prize: "1 salário",
-      date: "25 Jan 2025"
+      date: "25 Ago 2025"
     },
     {
       name: "Weverson Armani",
-      period: "Janeiro 2025",
+      period: "Agosto 2025",
       referrals: 34,
       prize: "1 salário",
-      date: "25 Jan 2025"
+      date: "25 Ago 2025"
     }
   ];
 
