@@ -29,26 +29,11 @@ const AffiliateRanking = () => {
     setError(null);
     
     try {
-      console.log('🚀 Chamando edge function get-affiliate-ranking...');
+      console.log('🚀 Ranking resetado - exibindo lista vazia');
       
-      const { data, error } = await supabase.functions.invoke('get-affiliate-ranking');
-
-      console.log('📊 Resposta da edge function:', data);
-
-      if (error) {
-        console.error('❌ Erro ao chamar edge function:', error);
-        throw error;
-      }
-
-      if (data?.success) {
-        console.log(`✅ Encontrados ${data.data.rankings?.length || 0} afiliados no ranking`);
-        setRankings(data.data.rankings || []);
-        setDebugInfo(data.data.debug);
-      } else {
-        console.error('❌ Resposta inválida da edge function:', data);
-        setError('Resposta inválida do servidor');
-        setDebugInfo(data?.data?.debug);
-      }
+      // Ranking resetado - mostra lista vazia temporariamente
+      setRankings([]);
+      setDebugInfo({ message: 'Ranking resetado pelo administrador' });
     } catch (error: any) {
       console.error('❌ Erro ao buscar ranking:', error);
       setError(error.message || 'Erro desconhecido');
@@ -150,10 +135,10 @@ const AffiliateRanking = () => {
           <div className="text-center py-8">
             <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground">
-              Nenhuma indicação válida registrada ainda.
+              Ranking resetado temporariamente.
             </p>
             <p className="text-sm text-muted-foreground mt-2">
-              Seja o primeiro a indicar alguém que compre um título!
+              Os dados dos referrals foram mantidos. O ranking será atualizado em breve!
             </p>
             <Button onClick={fetchRanking} variant="outline" size="sm" className="mt-4">
               <RefreshCw className="w-4 h-4 mr-2" />

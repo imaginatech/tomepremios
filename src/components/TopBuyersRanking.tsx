@@ -26,86 +26,12 @@ const TopBuyersRanking = () => {
     setError(null);
     
     try {
-      console.log('Carregando ranking de top compradores...');
+      console.log('🚀 Ranking de compradores resetado - exibindo lista vazia');
       
-      // Buscar os usuários que mais compraram tickets no sorteio ativo
-      const { data: activeRaffle } = await supabase
-        .from('raffles')
-        .select('id')
-        .eq('status', 'active')
-        .single();
-
-      if (!activeRaffle) {
-        console.log('Nenhum sorteio ativo encontrado');
-        setTopBuyers([]);
-        setIsLoading(false);
-        return;
-      }
-
-      // Buscar ranking dos compradores com mais tickets
-      const { data: tickets, error: ticketsError } = await supabase
-        .from('raffle_tickets')
-        .select('user_id')
-        .eq('raffle_id', activeRaffle.id)
-        .eq('payment_status', 'paid');
-
-      if (ticketsError) {
-        console.error('Erro ao buscar tickets:', ticketsError);
-        throw ticketsError;
-      }
-
-      if (!tickets || tickets.length === 0) {
-        console.log('Nenhum ticket pago encontrado');
-        setTopBuyers([]);
-        setIsLoading(false);
-        return;
-      }
-
-      // Agrupar tickets por usuário
-      const buyerCounts = tickets.reduce((acc: any, ticket: any) => {
-        const userId = ticket.user_id;
-        if (!acc[userId]) {
-          acc[userId] = 0;
-        }
-        acc[userId]++;
-        return acc;
-      }, {});
-
-      // Buscar nomes dos usuários
-      const userIds = Object.keys(buyerCounts);
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .in('id', userIds);
-
-      if (profilesError) {
-        console.error('Erro ao buscar profiles:', profilesError);
-        throw profilesError;
-      }
-
-      // Criar array com dados completos dos compradores
-      const buyersWithProfiles = userIds.map(userId => {
-        const profile = profiles?.find(p => p.id === userId);
-        return {
-          user_id: userId,
-          full_name: profile?.full_name || 'Usuário',
-          total_tickets: buyerCounts[userId]
-        };
-      });
-
-      // Ordenar e pegar apenas os top 3
-      const sortedBuyers = buyersWithProfiles
-        .sort((a, b) => b.total_tickets - a.total_tickets)
-        .slice(0, 3)
-        .map((buyer, index) => ({
-          ...buyer,
-          rank: index + 1
-        }));
-
-      console.log('Top 3 compradores carregados:', sortedBuyers);
-      setTopBuyers(sortedBuyers);
+      // Ranking resetado - mostra lista vazia temporariamente
+      setTopBuyers([]);
     } catch (error: any) {
-      console.error('Erro ao carregar top compradores:', error);
+      console.error('❌ Erro ao buscar top compradores:', error);
       setError(error.message || 'Erro desconhecido');
     } finally {
       setIsLoading(false);
@@ -205,10 +131,10 @@ const TopBuyersRanking = () => {
               <div className="text-center py-8">
                 <Ticket className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground">
-                  Nenhuma compra registrada ainda.
+                  Ranking de compradores resetado temporariamente.
                 </p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Seja o primeiro a comprar cotas e apareça no ranking!
+                  Os dados de compras foram mantidos. O ranking será atualizado em breve!
                 </p>
                 <Button onClick={loadTopBuyers} variant="outline" size="sm" className="mt-4">
                   <RefreshCw className="w-4 h-4 mr-2" />
