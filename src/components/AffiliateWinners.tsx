@@ -17,7 +17,7 @@ const AffiliateWinners = () => {
       period: "Julho 2025",
       referrals: 34,
       prize: "1 salário",
-      date: "25 Ago 2025"
+      date: "25 Jul 2025"
     }
   ];
 
