@@ -306,14 +306,13 @@ const RaffleSelector = () => {
                       className="w-full btn-pix text-white" 
                       size="lg"
                       onClick={handlePayment}
-                      disabled={true}
                     >
                       <DollarSign className="w-5 h-5 mr-2" />
-                      PIX Temporariamente Indisponível
+                      {user ? 'Pagar com PIX' : 'Login e Pagar com PIX'}
                     </Button>
 
                     <p className="text-xs text-muted-foreground text-center mt-3">
-                      Pagamento temporariamente desabilitado
+                      {user ? 'Pagamento processado instantaneamente' : 'Faça login para continuar'}
                     </p>
                   </>
                 )}
