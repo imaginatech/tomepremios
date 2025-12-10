@@ -32,36 +32,45 @@ const UserStats = () => {
 
   const fetchUserStats = async () => {
     try {
-      // Buscar todas as participações
-      const { data: allTickets, error: ticketsError } = await supabase
-        .from('raffle_tickets')
+      // Buscar todas as apostas (substituindo raffle_tickets)
+      const { data: allBets, error: betsError } = await supabase
+        .from('raffle_bets')
         .select('*, raffles(*)')
+        .eq('user_id', user?.id)
+        .neq('status', 'pending'); // Apenas apostas confirmadas
+
+      if (betsError) {
+        console.error('Error fetching bets:', betsError);
+        return;
+      }
+
+      // Buscar vitórias
+      const { data: allWins, error: winsError } = await supabase
+        .from('raffle_winners')
+        .select('*')
         .eq('user_id', user?.id);
 
-      if (ticketsError) {
-        console.error('Error fetching tickets:', ticketsError);
-        return;
+      if (winsError) {
+        console.error('Error fetching wins:', winsError);
       }
 
       // Calcular estatísticas
       const uniqueRaffles = new Set();
-      let totalWins = 0;
-      let totalPrizeValue = 0;
       let activeParticipations = 0;
 
-      (allTickets || []).forEach(ticket => {
-        const raffle = ticket.raffles;
-        uniqueRaffles.add(raffle.id);
+      (allBets || []).forEach(bet => {
+        const raffle = bet.raffles;
+        if (raffle) {
+          uniqueRaffles.add(raffle.id);
 
-        if (raffle.status === 'active') {
-          activeParticipations++;
-        }
-
-        if (raffle.winning_number === ticket.ticket_number) {
-          totalWins++;
-          totalPrizeValue += Number(raffle.prize_value);
+          if (raffle.status === 'active') {
+            activeParticipations++;
+          }
         }
       });
+
+      const totalWins = allWins?.length || 0;
+      const totalPrizeValue = allWins?.reduce((sum, win) => sum + Number(win.prize_amount), 0) || 0;
 
       setStats({
         totalParticipations: uniqueRaffles.size,

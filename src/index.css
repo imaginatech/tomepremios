@@ -50,7 +50,7 @@
 
 /* Gradientes personalizados */
 .gradient-gold {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #92400e 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1e40af 100%);
 }
 
 .gradient-green {
@@ -117,7 +117,7 @@
 
 /* Títulos com efeito dourado */
 .golden-text {
-  background: linear-gradient(135deg, #f59e0b, #d97706, #92400e);
+  background: linear-gradient(135deg, #3b82f6, #2563eb, #1e40af);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -136,14 +136,14 @@
 }
 
 .btn-gold {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
   transition: all 0.3s ease;
 }
 
 .btn-gold:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
 }
 
 /* Grid de títulos responsivo */
@@ -181,9 +181,9 @@
 }
 
 .title-number.selected {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
   color: white;
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
   transform: scale(1.1);
 }
 
@@ -194,9 +194,9 @@
 }
 
 .title-number.has-prize {
-  background: linear-gradient(135deg, #fbbf24, #f59e0b, #d97706);
+  background: linear-gradient(135deg, #60a5fa, #3b82f6, #2563eb);
   color: white;
-  box-shadow: 0 2px 12px rgba(251, 191, 36, 0.5);
+  box-shadow: 0 2px 12px rgba(96, 165, 250, 0.5);
   position: relative;
 }
 
@@ -213,7 +213,7 @@
 
 .title-number.has-prize:hover {
   transform: scale(1.1);
-  box-shadow: 0 4px 16px rgba(251, 191, 36, 0.7);
+  box-shadow: 0 4px 16px rgba(96, 165, 250, 0.7);
 }
 
 .title-number:hover:not(.sold) {

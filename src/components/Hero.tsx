@@ -27,7 +27,7 @@ const Hero = () => {
 
     console.log('Configurando realtime para raffle:', activeRaffleId);
 
-    // Configurar realtime para atualizações de tickets
+    // Configurar realtime para atualizações de apostas
     const channel = supabase
       .channel(`hero-raffle-${activeRaffleId}`)
       .on(
@@ -35,11 +35,11 @@ const Hero = () => {
         {
           event: '*',
           schema: 'public',
-          table: 'raffle_tickets',
+          table: 'raffle_bets',
           filter: `raffle_id=eq.${activeRaffleId}`
         },
         (payload) => {
-          console.log('Atualização de ticket detectada no Hero:', payload);
+          console.log('Atualização de aposta detectada no Hero:', payload);
           // Recarregar apenas os dados dos tickets para otimizar
           loadTicketsCount();
         }
@@ -85,15 +85,15 @@ const Hero = () => {
       let soldCount = 0;
 
       if (activeRaffle) {
-        // Buscar números vendidos apenas se houver sorteio
-        const { data: tickets, error: ticketsError } = await supabase
-          .from('raffle_tickets')
-          .select('ticket_number')
+        // Buscar números vendidos (apostas) apenas se houver sorteio
+        const { count, error: countError } = await supabase
+          .from('raffle_bets')
+          .select('*', { count: 'exact', head: true })
           .eq('raffle_id', activeRaffle.id)
-          .eq('payment_status', 'paid');
+          .neq('status', 'pending');
 
-        if (!ticketsError) {
-          soldCount = tickets?.length || 0;
+        if (!countError) {
+          soldCount = count || 0;
         }
         setActiveRaffleId(activeRaffle.id);
       }
@@ -104,7 +104,7 @@ const Hero = () => {
         ticketPrice: activeRaffle?.ticket_price || 0,
         totalTickets: activeRaffle?.total_tickets || 0,
         soldTickets: soldCount,
-        bannerUrl: settings?.banner_url || null,
+        bannerUrl: (settings as any)?.banner_url || null,
         isLoading: false
       });
     } catch (error) {
@@ -117,22 +117,22 @@ const Hero = () => {
     if (!activeRaffleId) return;
 
     try {
-      console.log('Atualizando contagem de tickets em tempo real...');
+      console.log('Atualizando contagem de apostas em tempo real...');
 
-      // Buscar apenas números vendidos para otimizar
-      const { data: tickets, error: ticketsError } = await supabase
-        .from('raffle_tickets')
-        .select('ticket_number')
+      // Buscar apenas contagem de apostas vendidas
+      const { count, error: countError } = await supabase
+        .from('raffle_bets')
+        .select('*', { count: 'exact', head: true })
         .eq('raffle_id', activeRaffleId)
-        .eq('payment_status', 'paid');
+        .neq('status', 'pending');
 
-      if (ticketsError) {
-        console.error('Erro ao buscar tickets para atualização:', ticketsError);
+      if (countError) {
+        console.error('Erro ao buscar apostas para atualização:', countError);
         return;
       }
 
-      const soldCount = tickets?.length || 0;
-      console.log(`Atualização realtime - Tickets vendidos: ${soldCount}/${raffleData.totalTickets}`);
+      const soldCount = count || 0;
+      console.log(`Atualização realtime - Apostas vendidas: ${soldCount}`);
 
       // Atualizar apenas o soldTickets mantendo os outros dados
       setRaffleData(prev => ({
@@ -140,7 +140,7 @@ const Hero = () => {
         soldTickets: soldCount
       }));
     } catch (error) {
-      console.error('Erro ao atualizar contagem de tickets:', error);
+      console.error('Erro ao atualizar contagem de apostas:', error);
     }
   };
 
@@ -159,8 +159,8 @@ const Hero = () => {
       <div className="container mx-auto px-4 relative z-10">
         {/* Banner de Prêmios Instantâneos */}
         <div className="mb-6">
-          <Card className="bg-gradient-to-r from-yellow-500 via-orange-500 to-red-500 text-white p-4 border-0 relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/20 via-orange-400/20 to-red-400/20 animate-pulse"></div>
+          <Card className="bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 text-white p-4 border-0 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 via-blue-500/20 to-blue-600/20 animate-pulse"></div>
             <div className="relative z-10">
               <div className="flex items-center justify-center gap-2 text-center">
                 <span className="text-2xl animate-bounce">⭐</span>

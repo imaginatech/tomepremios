@@ -142,7 +142,7 @@ const Winners = () => {
                     <h4 className="text-sm font-medium text-muted-foreground mb-3 text-center">Números Sorteados</h4>
                     <div className="flex flex-wrap justify-center gap-2">
                       {result.drawn_numbers.map((num, i) => (
-                        <div key={i} className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 text-white font-bold flex items-center justify-center shadow-sm">
+                        <div key={i} className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-white font-bold flex items-center justify-center shadow-sm">
                           {String(num).padStart(2, '0')}
                         </div>
                       ))}
