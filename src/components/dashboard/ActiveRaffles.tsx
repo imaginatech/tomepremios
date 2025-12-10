@@ -139,6 +139,9 @@ const ActiveRaffles = () => {
                       <Clock className="w-3 h-3" />
                       Sorteio: {bet.raffles?.draw_date ? format(new Date(bet.raffles.draw_date), 'dd/MM/yyyy', { locale: ptBR }) : 'Data a definir'}
                     </p>
+                    <p className="text-xs text-muted-foreground mt-1 font-mono bg-muted/50 px-2 py-1 rounded inline-block">
+                      Volante: #{bet.id.slice(0, 8).toUpperCase()}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
                     {getStatusBadge(bet.status, bet.raffles?.status)}
