@@ -74,12 +74,15 @@ const Header: React.FC<HeaderProps> = ({ affiliateCode }) => {
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             {/* Logo */}
-            <div className="flex items-center space-x-3 cursor-pointer" onClick={handleHomeClick}>
-              <img 
-                src="/lovable-uploads/b3c4a522-910c-4501-89cc-c9228e15ab49.png" 
-                alt="Tome prêmios Logo" 
+            <div className="flex flex-col items-center cursor-pointer" onClick={handleHomeClick}>
+              <img
+                src="/lovable-uploads/b3c4a522-910c-4501-89cc-c9228e15ab49.png"
+                alt="Tome prêmios Logo"
                 className="h-12 w-auto"
               />
+              <span className="text-[10px] font-bold text-primary uppercase tracking-wider -mt-1">
+                A Loteria da virada!
+              </span>
             </div>
 
             {/* Navigation - Desktop */}
@@ -104,9 +107,9 @@ const Header: React.FC<HeaderProps> = ({ affiliateCode }) => {
                     {user.email}
                   </span>
                   {location.pathname !== '/dashboard' && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={handleDashboardClick}
                       className="hidden sm:flex"
                     >
@@ -115,9 +118,9 @@ const Header: React.FC<HeaderProps> = ({ affiliateCode }) => {
                     </Button>
                   )}
                   {isAdmin && location.pathname !== '/admin' && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={handleAdminClick}
                       className="hidden sm:flex"
                     >
@@ -125,9 +128,9 @@ const Header: React.FC<HeaderProps> = ({ affiliateCode }) => {
                       Admin
                     </Button>
                   )}
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={signOut}
                     className="hidden sm:flex"
                   >
@@ -136,9 +139,9 @@ const Header: React.FC<HeaderProps> = ({ affiliateCode }) => {
                   </Button>
                 </div>
               ) : (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setShowAuthModal(true)}
                   className="flex items-center"
                 >
@@ -151,7 +154,7 @@ const Header: React.FC<HeaderProps> = ({ affiliateCode }) => {
         </div>
       </header>
 
-      <AuthModal 
+      <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         onSuccess={handleAuthSuccess}
