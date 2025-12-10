@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,67 +7,87 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useNavigate } from 'react-router-dom';
 
-interface Raffle {
+interface Bet {
   id: string;
-  title: string;
-  description: string | null;
-  prize_value: number;
-  ticket_price: number;
-  total_tickets: number;
-  draw_date: string;
-  user_tickets: number;
+  numbers: number[];
+  status: string;
+  created_at: string;
+  raffles: {
+    id: string;
+    title: string;
+    draw_date: string;
+    status: string;
+  };
 }
 
 const ActiveRaffles = () => {
   const { user } = useAuth();
-  const [raffles, setRaffles] = useState<Raffle[]>([]);
+  const [bets, setBets] = useState<Bet[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (user) {
-      fetchActiveRaffles();
+      fetchMyBets();
     }
   }, [user]);
 
-  const fetchActiveRaffles = async () => {
+  const fetchMyBets = async () => {
     try {
-      // Buscar sorteios ativos que o usuário está participando
+      // Buscar apostas do usuário com detalhes do sorteio
       const { data, error } = await supabase
-        .from('raffles')
+        .from('raffle_bets')
         .select(`
-          *,
-          raffle_tickets!inner(user_id)
+          id,
+          numbers,
+          status,
+          created_at,
+          raffles (
+            id,
+            title,
+            draw_date,
+            status
+          )
         `)
-        .eq('status', 'active')
-        .eq('raffle_tickets.user_id', user?.id);
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching active raffles:', error);
+        console.error('Error fetching bets:', error);
         return;
       }
 
-      // Contar tickets por sorteio
-      const rafflesWithTickets = await Promise.all(
-        (data || []).map(async (raffle) => {
-          const { count } = await supabase
-            .from('raffle_tickets')
-            .select('*', { count: 'exact' })
-            .eq('raffle_id', raffle.id)
-            .eq('user_id', user?.id);
+      // Tipagem manual para garantir que o TypeScript entenda a estrutura do join
+      const formattedBets = (data as any[]).map(item => ({
+        id: item.id,
+        numbers: item.numbers,
+        status: item.status || 'pending',
+        created_at: item.created_at,
+        raffles: item.raffles
+      }));
 
-          return {
-            ...raffle,
-            user_tickets: count || 0
-          };
-        })
-      );
-
-      setRaffles(rafflesWithTickets);
+      setBets(formattedBets);
     } catch (error) {
       console.error('Error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getStatusBadge = (status: string, raffleStatus: string) => {
+    if (raffleStatus === 'completed') {
+      return <Badge variant="secondary" className="bg-gray-100 text-gray-800">Finalizado</Badge>;
+    }
+
+    switch (status) {
+      case 'paid':
+        return <Badge className="bg-green-100 text-green-800 hover:bg-green-200 border-green-200">Confirmado</Badge>;
+      case 'pending':
+        return <Badge variant="outline" className="text-yellow-600 border-yellow-200 bg-yellow-50">Pendente</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
@@ -77,17 +96,14 @@ const ActiveRaffles = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Trophy className="w-5 h-5" />
-            Edições que Estou Participando
+            <Ticket className="w-5 h-5" />
+            Minhas Apostas
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="animate-pulse space-y-4">
-            {[1, 2].map((i) => (
-              <div key={i} className="border rounded-lg p-4">
-                <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
-                <div className="h-3 bg-muted rounded w-1/2"></div>
-              </div>
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="border rounded-lg p-4 h-32 bg-muted/20"></div>
             ))}
           </div>
         </CardContent>
@@ -99,53 +115,52 @@ const ActiveRaffles = () => {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Trophy className="w-5 h-5" />
-          Edições que Estou Participando ({raffles.length})
+          <Ticket className="w-5 h-5" />
+          Minhas Apostas ({bets.length})
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {raffles.length === 0 ? (
+        {bets.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>Você ainda não está participando de nenhuma edição.</p>
-            <Button className="mt-4" onClick={() => window.location.href = '/#sorteios'}>
-              Ver Sorteios Disponíveis
+            <Ticket className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p>Você ainda não realizou nenhuma aposta.</p>
+            <Button className="mt-4" onClick={() => navigate('/')}>
+              Fazer uma fezinha
             </Button>
           </div>
         ) : (
           <div className="space-y-4">
-            {raffles.map((raffle) => (
-              <div key={raffle.id} className="border rounded-lg p-4 space-y-3">
-                <div className="flex items-start justify-between">
+            {bets.map((bet) => (
+              <div key={bet.id} className="border rounded-lg p-4 space-y-3 hover:border-primary/30 transition-colors bg-card">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
                   <div>
-                    <h3 className="font-semibold text-lg">{raffle.title}</h3>
-                    <p className="text-sm text-muted-foreground">{raffle.description}</p>
+                    <h3 className="font-semibold text-lg">{bet.raffles?.title || 'Sorteio Indisponível'}</h3>
+                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                      <Clock className="w-3 h-3" />
+                      Sorteio: {bet.raffles?.draw_date ? format(new Date(bet.raffles.draw_date), 'dd/MM/yyyy', { locale: ptBR }) : 'Data a definir'}
+                    </p>
                   </div>
-                  <Badge variant="secondary" className="bg-green-100 text-green-800">
-                    Ativo
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(bet.status, bet.raffles?.status)}
+                  </div>
                 </div>
-                
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Trophy className="w-4 h-4 text-primary" />
-                    <span>R$ {raffle.prize_value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+
+                <div className="bg-muted/30 p-3 rounded-md">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Seus números da sorte:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {bet.numbers.map((num, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white dark:bg-slate-800 border border-primary/20 text-primary font-bold text-sm shadow-sm"
+                      >
+                        {String(num).padStart(2, '0')}
+                      </span>
+                    ))}
                   </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Ticket className="w-4 h-4 text-blue-500" />
-                    <span>{raffle.user_tickets} número{raffle.user_tickets !== 1 ? 's' : ''}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-orange-500" />
-                    <span>{raffle.total_tickets} vagas</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-red-500" />
-                    <span>{format(new Date(raffle.draw_date), 'dd/MM/yy', { locale: ptBR })}</span>
-                  </div>
+                </div>
+
+                <div className="text-xs text-muted-foreground text-right">
+                  Aposta realizada em {format(new Date(bet.created_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
                 </div>
               </div>
             ))}
