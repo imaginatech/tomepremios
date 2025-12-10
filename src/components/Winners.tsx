@@ -1,45 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, Calendar, DollarSign, User, Video } from 'lucide-react';
+import { Trophy, Calendar, CheckCircle2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import StoryVideoModal from './StoryVideoModal';
 
-interface Winner {
+interface RaffleResult {
   id: string;
-  name: string;
-  number: string;
-  prize: string;
-  date: string;
-  edition: string;
-  videoUrl?: string;
-  videoTitle?: string;
-}
-
-interface Stats {
-  completedRaffles: number;
-  totalDistributed: number;
-  totalParticipants: number;
-  totalUsers: number;
+  title: string;
+  draw_date: string;
+  drawn_numbers: number[];
+  winners_count: {
+    6: number;
+    5: number;
+    4: number;
+  };
 }
 
 const Winners = () => {
-  const [winners, setWinners] = useState<Winner[]>([]);
-  const [stats, setStats] = useState<Stats>({
-    completedRaffles: 0,
-    totalDistributed: 0,
-    totalParticipants: 0,
-    totalUsers: 0
-  });
+  const [results, setResults] = useState<RaffleResult[]>([]);
   const [loading, setLoading] = useState(true);
-  const [videoModalOpen, setVideoModalOpen] = useState(false);
-  const [selectedVideo, setSelectedVideo] = useState<{url: string; title: string} | null>(null);
 
   useEffect(() => {
     fetchWinnersAndStats();
 
-    // Configurar realtime para atualizações de sorteios concluídos
     const channel = supabase
       .channel('winners-updates')
       .on(
@@ -50,15 +33,11 @@ const Winners = () => {
           table: 'raffles',
           filter: 'status=eq.completed'
         },
-        (payload) => {
-          console.log('Novo ganhador detectado:', payload);
-          // Recarregar dados quando um sorteio for concluído
+        () => {
           fetchWinnersAndStats();
         }
       )
-      .subscribe((status) => {
-        console.log('Status da subscription Winners:', status);
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
@@ -67,131 +46,63 @@ const Winners = () => {
 
   const fetchWinnersAndStats = async () => {
     try {
-      console.log('Buscando ganhadores...');
-      
-      // Buscar sorteios concluídos com ganhadores
+      // 1. Fetch completed raffles
       const { data: completedRaffles, error: rafflesError } = await supabase
         .from('raffles')
-        .select('*, winner_video_url, winner_video_title')
+        .select('*')
         .eq('status', 'completed')
-        .not('winning_number', 'is', null)
-        .order('updated_at', { ascending: false })
-        .limit(7);
+        .order('draw_date', { ascending: false })
+        .limit(6);
 
-      console.log('Sorteios concluídos encontrados:', completedRaffles);
+      if (rafflesError) throw rafflesError;
 
-      if (rafflesError) {
-        console.error('Error fetching completed raffles:', rafflesError);
+      if (!completedRaffles || completedRaffles.length === 0) {
+        setResults([]);
+        setLoading(false);
         return;
       }
 
-      // Buscar dados dos ganhadores para cada sorteio
-      const winnersData: Winner[] = [];
-      if (completedRaffles && completedRaffles.length > 0) {
-        for (let i = 0; i < completedRaffles.length; i++) {
-          const raffle = completedRaffles[i];
-          
-          // Primeiro buscar o ticket ganhador
-          const { data: winningTicket, error: ticketError } = await supabase
-            .from('raffle_tickets')
-            .select('ticket_number, user_id')
-            .eq('raffle_id', raffle.id)
-            .eq('ticket_number', raffle.winning_number)
-            .eq('payment_status', 'paid')
-            .single();
+      // 2. Fetch winners for these raffles to count matches
+      const raffleIds = completedRaffles.map(r => r.id);
+      const { data: winnersData, error: winnersError } = await supabase
+        .from('raffle_winners')
+        .select('raffle_id, matches')
+        .in('raffle_id', raffleIds);
 
-          console.log(`Ticket ganhador para raffle ${raffle.id}:`, winningTicket);
+      if (winnersError) throw winnersError;
 
-          if (!ticketError && winningTicket) {
-            // Depois buscar o perfil do usuário
-            const { data: userProfile, error: profileError } = await supabase
-              .from('profiles')
-              .select('full_name')
-              .eq('id', winningTicket.user_id)
-              .single();
+      // 3. Aggregate counts
+      const processedResults: RaffleResult[] = completedRaffles.map(raffle => {
+        const raffleWinners = winnersData?.filter(w => w.raffle_id === raffle.id) || [];
 
-            console.log(`Perfil do ganhador para raffle ${raffle.id}:`, userProfile);
-
-            if (!profileError && userProfile) {
-              const winnerName = userProfile.full_name || 'Usuário';
-
-              winnersData.push({
-                id: raffle.id,
-                name: winnerName,
-                number: String(raffle.winning_number).padStart(3, '0'),
-                prize: `R$ ${Number(raffle.prize_value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-                date: raffle.draw_date,
-                edition: `#${String(i + 1).padStart(3, '0')}`,
-                videoUrl: raffle.winner_video_url,
-                videoTitle: raffle.winner_video_title || 'Mensagem do Ganhador'
-              });
-            } else {
-              console.error(`Erro ao buscar perfil para raffle ${raffle.id}:`, profileError);
-            }
-          } else {
-            console.error(`Erro ao buscar ticket para raffle ${raffle.id}:`, ticketError);
+        return {
+          id: raffle.id,
+          title: raffle.title || `Sorteio #${raffle.id.slice(0, 4)}`,
+          draw_date: raffle.draw_date,
+          drawn_numbers: raffle.drawn_numbers || [],
+          winners_count: {
+            6: raffleWinners.filter(w => w.matches === 6).length,
+            5: raffleWinners.filter(w => w.matches === 5).length,
+            4: raffleWinners.filter(w => w.matches === 4).length
           }
-        }
-      }
-
-      console.log('Dados dos ganhadores processados:', winnersData);
-      setWinners(winnersData);
-
-      // Buscar estatísticas em paralelo
-      const [
-        { count: completedCount },
-        { data: totalPrizes },
-        { count: totalUsersCount }
-      ] = await Promise.all([
-        supabase
-          .from('raffles')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'completed'),
-        supabase
-          .from('raffles')
-          .select('prize_value')
-          .eq('status', 'completed'),
-        supabase
-          .from('profiles')
-          .select('*', { count: 'exact', head: true })
-      ]);
-
-      const totalDistributed = totalPrizes?.reduce((sum, raffle) => sum + Number(raffle.prize_value), 0) || 0;
-
-      console.log('Estatísticas:', { completedCount, totalDistributed, totalUsersCount });
-
-      setStats({
-        completedRaffles: completedCount || 0,
-        totalDistributed,
-        totalParticipants: totalUsersCount || 0,
-        totalUsers: totalUsersCount || 0
+        };
       });
 
+      setResults(processedResults);
+
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error fetching winners data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const openVideoModal = (videoUrl: string, videoTitle: string) => {
-    setSelectedVideo({ url: videoUrl, title: videoTitle });
-    setVideoModalOpen(true);
-  };
-
-  const closeVideoModal = () => {
-    setVideoModalOpen(false);
-    setSelectedVideo(null);
-  };
-
   if (loading) {
     return (
       <section className="py-12 bg-muted/30" id="ganhadores">
-        <div className="container mx-auto px-4">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4 text-muted-foreground">Carregando dados...</p>
-          </div>
+        <div className="container mx-auto px-4 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Carregando resultados...</p>
         </div>
       </section>
     );
@@ -202,104 +113,78 @@ const Winners = () => {
       <div className="container mx-auto px-4">
         <div className="text-center mb-8">
           <h2 className="text-3xl md:text-4xl font-bold mb-4 golden-text">
-            Últimos Ganhadores
+            Resultados dos Sorteios
           </h2>
           <p className="text-lg text-muted-foreground">
-            Confira quem já foi contemplado nos nossos sorteios!
+            Confira os números sorteados e os ganhadores de cada edição
           </p>
         </div>
 
-        {winners.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {winners.map((winner, index) => (
-              <Card key={winner.id} className="p-6 hover-lift bg-card/80 backdrop-blur-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <Badge variant="secondary" className="bg-accent text-white">
-                    {winner.edition}
-                  </Badge>
-                  <Trophy className="w-6 h-6 text-accent" />
-                </div>
-                
-                <div className="space-y-3">
-                  <div className="flex items-center">
-                    <User className="w-4 h-4 mr-2 text-muted-foreground" />
-                    <span className="font-semibold">{winner.name}</span>
-                  </div>
-                  
-                  <div className="flex items-center">
-                    <div className="w-4 h-4 mr-2 bg-primary rounded text-xs"></div>
-                    <span>Número da Sorte: <strong>{winner.number}</strong></span>
-                  </div>
-                  
-                  <div className="flex items-center">
-                    <DollarSign className="w-4 h-4 mr-2 text-primary" />
-                    <span className="text-lg font-bold text-primary">{winner.prize}</span>
-                  </div>
-                  
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Calendar className="w-4 h-4 mr-2" />
-                    <span>{new Date(winner.date).toLocaleDateString('pt-BR')}</span>
-                  </div>
-                  
-                  {/* Botão de mensagem do ganhador */}
-                  {winner.videoUrl && (
-                    <div className="mt-3 pt-3 border-t">
-                      <Button
-                        onClick={() => openVideoModal(winner.videoUrl!, winner.videoTitle!)}
-                        variant="default"
-                        size="sm"
-                        className="w-full flex items-center gap-2 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white shadow-lg"
-                      >
-                        <Video className="w-4 h-4" />
-                        Mensagem do Ganhador
-                      </Button>
+        {results.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            {results.map((result) => (
+              <Card key={result.id} className="overflow-hidden hover:shadow-lg transition-shadow border-primary/20">
+                <div className="bg-primary/5 p-4 border-b border-primary/10 flex justify-between items-center">
+                  <div>
+                    <h3 className="font-bold text-lg text-primary">{result.title}</h3>
+                    <div className="flex items-center text-xs text-muted-foreground mt-1">
+                      <Calendar className="w-3 h-3 mr-1" />
+                      {new Date(result.draw_date).toLocaleDateString('pt-BR')}
                     </div>
-                  )}
+                  </div>
+                  <Badge variant="outline" className="border-primary/30 bg-primary/10">
+                    Concluído
+                  </Badge>
+                </div>
+
+                <div className="p-6">
+                  <div className="mb-6">
+                    <h4 className="text-sm font-medium text-muted-foreground mb-3 text-center">Números Sorteados</h4>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {result.drawn_numbers.map((num, i) => (
+                        <div key={i} className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 text-white font-bold flex items-center justify-center shadow-sm">
+                          {String(num).padStart(2, '0')}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 bg-muted/50 rounded-lg p-3">
+                    <div className="flex justify-between items-center p-2 border-b border-dashed border-gray-200 dark:border-gray-700">
+                      <span className="text-sm font-medium flex items-center">
+                        <Trophy className="w-4 h-4 mr-2 text-yellow-500" />
+                        Sena (6 acertos)
+                      </span>
+                      <span className="font-bold text-primary">{result.winners_count[6]} ganhadores</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 border-b border-dashed border-gray-200 dark:border-gray-700">
+                      <span className="text-sm font-medium flex items-center">
+                        <Trophy className="w-4 h-4 mr-2 text-gray-400" />
+                        Quina (5 acertos)
+                      </span>
+                      <span className="font-bold text-primary">{result.winners_count[5]} ganhadores</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2">
+                      <span className="text-sm font-medium flex items-center">
+                        <Trophy className="w-4 h-4 mr-2 text-amber-600" />
+                        Quadra (4 acertos)
+                      </span>
+                      <span className="font-bold text-primary">{result.winners_count[4]} ganhadores</span>
+                    </div>
+                  </div>
                 </div>
               </Card>
             ))}
           </div>
         ) : (
-          <div className="text-center mb-8">
-            <p className="text-muted-foreground">Ainda não temos ganhadores registrados.</p>
+          <div className="text-center mb-12 py-12 bg-card rounded-lg border border-dashed">
+            <Trophy className="w-12 h-12 mx-auto text-muted-foreground mb-4 opacity-50" />
+            <p className="text-lg font-medium text-muted-foreground">Nenhum sorteio foi realizado ainda.</p>
+            <p className="text-sm text-muted-foreground/80">Fique atento, o próximo sorteio pode ser o seu!</p>
           </div>
         )}
 
-        {/* Estatísticas */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="p-4 text-center bg-card/50 backdrop-blur-sm">
-            <div className="text-2xl font-bold text-primary mb-1">{stats.completedRaffles}</div>
-            <div className="text-sm text-muted-foreground">Sorteios Realizados</div>
-          </Card>
-          
-          <Card className="p-4 text-center bg-card/50 backdrop-blur-sm">
-            <div className="text-2xl font-bold text-accent mb-1">
-              R$ {stats.totalDistributed.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </div>
-            <div className="text-sm text-muted-foreground">Total Distribuído</div>
-          </Card>
-          
-          <Card className="p-4 text-center bg-card/50 backdrop-blur-sm">
-            <div className="text-2xl font-bold text-primary mb-1">{stats.totalParticipants}</div>
-            <div className="text-sm text-muted-foreground">Usuários Cadastrados</div>
-          </Card>
-          
-          <Card className="p-4 text-center bg-card/50 backdrop-blur-sm">
-            <div className="text-2xl font-bold text-accent mb-1">100%</div>
-            <div className="text-sm text-muted-foreground">Taxa de Pagamento</div>
-          </Card>
-        </div>
       </div>
-
-      {/* Modal de vídeo */}
-      {selectedVideo && (
-        <StoryVideoModal
-          isOpen={videoModalOpen}
-          onClose={closeVideoModal}
-          videoUrl={selectedVideo.url}
-          title={selectedVideo.title}
-        />
-      )}
     </section>
   );
 };

@@ -7,7 +7,6 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface UserStats {
   totalParticipations: number;
-  totalTickets: number;
   totalWins: number;
   totalPrizeValue: number;
   activeParticipations: number;
@@ -18,7 +17,6 @@ const UserStats = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState<UserStats>({
     totalParticipations: 0,
-    totalTickets: 0,
     totalWins: 0,
     totalPrizeValue: 0,
     activeParticipations: 0,
@@ -54,11 +52,11 @@ const UserStats = () => {
       (allTickets || []).forEach(ticket => {
         const raffle = ticket.raffles;
         uniqueRaffles.add(raffle.id);
-        
+
         if (raffle.status === 'active') {
           activeParticipations++;
         }
-        
+
         if (raffle.winning_number === ticket.ticket_number) {
           totalWins++;
           totalPrizeValue += Number(raffle.prize_value);
@@ -67,7 +65,6 @@ const UserStats = () => {
 
       setStats({
         totalParticipations: uniqueRaffles.size,
-        totalTickets: allTickets?.length || 0,
         totalWins,
         totalPrizeValue,
         activeParticipations,
@@ -133,28 +130,21 @@ const UserStats = () => {
           value={stats.totalParticipations}
           subtitle="edições diferentes"
         />
-        
-        <StatItem
-          icon={Ticket}
-          title="Números Comprados"
-          value={stats.totalTickets}
-          subtitle="total de tickets"
-        />
-        
+
         <StatItem
           icon={Trophy}
           title="Vitórias"
           value={stats.totalWins}
           subtitle={stats.totalWins > 0 ? `${((stats.totalWins / stats.totalParticipations) * 100).toFixed(1)}% de sucesso` : undefined}
         />
-        
+
         <StatItem
           icon={Award}
           title="Prêmios Ganhos"
           value={`R$ ${stats.totalPrizeValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
           subtitle="valor total"
         />
-        
+
         <StatItem
           icon={Calendar}
           title="Participações Ativas"

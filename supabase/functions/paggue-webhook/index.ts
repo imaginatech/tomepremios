@@ -168,17 +168,15 @@ serve(async (req) => {
 
     logStep("Status do pagamento atualizado para 'paid'");
 
-    // Criar os tickets da rifa
-    const ticketsToInsert = pixPayment.selected_numbers.map((number: number) => ({
-      user_id: pixPayment.user_id,
-      raffle_id: pixPayment.raffle_id,
-      ticket_number: number,
-      payment_status: 'paid'
-    }));
-
+    // Criar a aposta (Bet)
     const { error: ticketsError } = await supabase
-      .from('raffle_tickets')
-      .insert(ticketsToInsert);
+      .from('raffle_bets')
+      .insert({
+        raffle_id: pixPayment.raffle_id,
+        user_id: pixPayment.user_id,
+        numbers: pixPayment.selected_numbers,
+        status: 'paid'
+      });
 
     if (ticketsError) {
       logStep("ERRO ao criar tickets", { error: ticketsError.message });
@@ -191,8 +189,7 @@ serve(async (req) => {
       throw new Error(`Erro ao criar tickets: ${ticketsError.message}`);
     }
 
-    logStep("Tickets criados com sucesso", { 
-      count: ticketsToInsert.length, 
+    logStep("Aposta criada com sucesso", { 
       numbers: pixPayment.selected_numbers 
     });
 
@@ -203,7 +200,7 @@ serve(async (req) => {
       received: true, 
       processed: true,
       payment_id: pixPayment.id,
-      tickets_created: ticketsToInsert.length
+      tickets_created: 1
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200

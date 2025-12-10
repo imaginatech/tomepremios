@@ -12,6 +12,7 @@ import AffiliateManagement from '@/components/admin/AffiliateManagement';
 import WinnerManagement from '@/components/admin/WinnerManagement';
 import { AffiliateTestPanel } from '@/components/admin/AffiliateTestPanel';
 import { InstantPrizesManagement } from '@/components/admin/InstantPrizesManagement';
+import LotterySettings from '@/components/admin/LotterySettings';
 import { Shield } from 'lucide-react';
 
 const Admin = () => {
@@ -79,13 +80,14 @@ const Admin = () => {
           </div>
 
           <Tabs defaultValue="dashboard" className="w-full">
-            <TabsList className="grid w-full grid-cols-6">
+            <TabsList className="grid w-full grid-cols-7">
               <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
               <TabsTrigger value="raffles">Gerenciar Edições</TabsTrigger>
               <TabsTrigger value="users">Usuários</TabsTrigger>
               <TabsTrigger value="winners">Ganhadores</TabsTrigger>
               <TabsTrigger value="instant-prizes">Instantâneos</TabsTrigger>
               <TabsTrigger value="affiliates">Afiliados</TabsTrigger>
+              <TabsTrigger value="settings">Configurações</TabsTrigger>
             </TabsList>
             <TabsContent value="dashboard">
               <AdminDashboard />
@@ -107,6 +109,9 @@ const Admin = () => {
                 <AffiliateManagement />
                 <AffiliateTestPanel />
               </div>
+            </TabsContent>
+            <TabsContent value="settings">
+              <LotterySettings />
             </TabsContent>
           </Tabs>
         </div>

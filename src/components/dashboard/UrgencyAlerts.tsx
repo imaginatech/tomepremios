@@ -14,7 +14,6 @@ interface UrgentRaffle {
   prize_value: number;
   draw_date: string;
   total_tickets: number;
-  sold_tickets: number;
 }
 
 const UrgencyAlerts = () => {
@@ -41,22 +40,7 @@ const UrgencyAlerts = () => {
         return;
       }
 
-      // Contar tickets vendidos para cada sorteio
-      const rafflesWithCounts = await Promise.all(
-        (raffles || []).map(async (raffle) => {
-          const { count } = await supabase
-            .from('raffle_tickets')
-            .select('*', { count: 'exact' })
-            .eq('raffle_id', raffle.id);
-
-          return {
-            ...raffle,
-            sold_tickets: count || 0
-          };
-        })
-      );
-
-      setUrgentRaffles(rafflesWithCounts);
+      setUrgentRaffles(raffles || []);
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -66,12 +50,10 @@ const UrgencyAlerts = () => {
 
   const getUrgencyLevel = (raffle: UrgentRaffle) => {
     const daysUntilDraw = Math.ceil((new Date(raffle.draw_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-    const fillPercentage = (raffle.sold_tickets / raffle.total_tickets) * 100;
-    
+
     if (daysUntilDraw <= 1) return 'critical';
-    if (daysUntilDraw <= 3 || fillPercentage >= 80) return 'high';
-    if (fillPercentage >= 60) return 'medium';
-    return 'low';
+    if (daysUntilDraw <= 3) return 'high';
+    return 'medium';
   };
 
   const getUrgencyColor = (level: string) => {
@@ -131,8 +113,7 @@ const UrgencyAlerts = () => {
         ) : (
           urgentRaffles.map((raffle) => {
             const urgencyLevel = getUrgencyLevel(raffle);
-            const fillPercentage = (raffle.sold_tickets / raffle.total_tickets) * 100;
-            
+
             return (
               <div key={raffle.id} className={`border rounded-lg p-3 ${getUrgencyColor(urgencyLevel)}`}>
                 <div className="flex items-start gap-2 mb-2">
@@ -140,30 +121,17 @@ const UrgencyAlerts = () => {
                   <div className="flex-1 min-w-0">
                     <h4 className="font-medium text-sm truncate">{raffle.title}</h4>
                     <p className="text-xs opacity-80">
-                      Sorteio {formatDistanceToNow(new Date(raffle.draw_date), { 
-                        addSuffix: true, 
-                        locale: ptBR 
+                      Sorteio {formatDistanceToNow(new Date(raffle.draw_date), {
+                        addSuffix: true,
+                        locale: ptBR
                       })}
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="flex items-center gap-1">
-                      <Users className="w-3 h-3" />
-                      {raffle.sold_tickets}/{raffle.total_tickets}
-                    </span>
-                    <span>{fillPercentage.toFixed(0)}% vendido</span>
-                  </div>
-                  
-                  <div className="w-full bg-white/50 rounded-full h-1.5">
-                    <div 
-                      className="bg-current h-1.5 rounded-full transition-all duration-300"
-                      style={{ width: `${fillPercentage}%` }}
-                    ></div>
-                  </div>
-                  
+                  {/* (Conteúdo de progresso removido) */}
+
                   {urgencyLevel === 'critical' && (
                     <Button size="sm" className="w-full mt-2" onClick={() => window.location.href = '/#sorteios'}>
                       Participar Agora!
@@ -174,7 +142,7 @@ const UrgencyAlerts = () => {
             );
           })
         )}
-        
+
         <div className="pt-2 border-t">
           <p className="text-xs text-muted-foreground text-center">
             🔥 Não perca as oportunidades!

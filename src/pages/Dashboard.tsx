@@ -8,10 +8,8 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import UserProfile from '@/components/dashboard/UserProfile';
 import ActiveRaffles from '@/components/dashboard/ActiveRaffles';
-import ParticipatedRaffles from '@/components/dashboard/ParticipatedRaffles';
 import UrgencyAlerts from '@/components/dashboard/UrgencyAlerts';
 import UserStats from '@/components/dashboard/UserStats';
-import AffiliateArea from '@/components/affiliate/AffiliateArea';
 
 interface UserProfile {
   full_name: string | null;
@@ -21,7 +19,6 @@ const Dashboard = () => {
   const { user, loading, signOut } = useAuth();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'affiliate'>('dashboard');
 
   useEffect(() => {
     if (user) {
@@ -82,8 +79,8 @@ const Dashboard = () => {
                 Bem-vindo ao seu painel de controle
               </p>
             </div>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={handleSignOut}
               className="flex items-center gap-2"
             >
@@ -91,41 +88,21 @@ const Dashboard = () => {
               Sair da conta
             </Button>
           </div>
-          
-          {/* Navegação das abas */}
-          <div className="flex gap-4 mb-6">
-            <Button
-              variant={activeTab === 'dashboard' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('dashboard')}
-            >
-              Dashboard
-            </Button>
-            <Button
-              variant={activeTab === 'affiliate' ? 'default' : 'outline'}
-              onClick={() => setActiveTab('affiliate')}
-            >
-              Programa de Afiliados
-            </Button>
-          </div>
-          
-          {activeTab === 'dashboard' ? (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Coluna Principal */}
-              <div className="lg:col-span-2 space-y-6">
-                <UserProfile />
-                <ParticipatedRaffles />
-                <ActiveRaffles />
-              </div>
-              
-              {/* Sidebar */}
-              <div className="space-y-6">
-                <UrgencyAlerts />
-                <UserStats />
-              </div>
+
+          {/* Dashboard Content */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Coluna Principal */}
+            <div className="lg:col-span-2 space-y-6">
+              <UserProfile />
+              <ActiveRaffles />
             </div>
-          ) : (
-            <AffiliateArea />
-          )}
+
+            {/* Sidebar */}
+            <div className="space-y-6">
+              <UrgencyAlerts />
+              <UserStats />
+            </div>
+          </div>
         </div>
       </main>
       <Footer />

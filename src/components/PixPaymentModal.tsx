@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import confetti from 'canvas-confetti';
 import AffiliateSignupButton from '@/components/affiliate/AffiliateSignupButton';
+import QRCode from 'qrcode';
 
 interface PixPaymentModalProps {
   isOpen: boolean;
@@ -29,11 +30,12 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [pixData, setPixData] = useState<{
     pix_code: string;
-    qr_code_image: string;
+    qr_code_image: string | null;
     payment_id: string;
   } | null>(null);
+  const [generatedQrCode, setGeneratedQrCode] = useState<string | null>(null);
   const [instantPrize, setInstantPrize] = useState<any>(null);
-  
+
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -51,10 +53,11 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
     if (isOpen && paymentStatus === 'pending') {
       setTimeLeft(600); // 10 minutos
       setPixData(null); // Limpar dados anteriores
-      
+      setGeneratedQrCode(null);
+
       // Criar pagamento PIX automaticamente
       createPixPayment();
-      
+
       const timer = setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
@@ -69,10 +72,28 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
     }
   }, [isOpen, paymentStatus]);
 
+  // Generate QR Code if image is missing
+  useEffect(() => {
+    const generateQrCode = async () => {
+      if (pixData?.pix_code && !pixData.qr_code_image) {
+        try {
+          const url = await QRCode.toDataURL(pixData.pix_code);
+          setGeneratedQrCode(url);
+        } catch (err) {
+          console.error('Error generating QR code:', err);
+        }
+      } else if (pixData?.qr_code_image) {
+        setGeneratedQrCode(pixData.qr_code_image);
+      }
+    };
+
+    generateQrCode();
+  }, [pixData]);
+
   // Criar pagamento PIX real
   const createPixPayment = async () => {
     if (!user) return;
-    
+
     setIsProcessing(true);
     try {
       const { data, error } = await supabase.functions.invoke('create-pix-payment', {
@@ -134,16 +155,16 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
         if (data.status === 'paid') {
           clearInterval(pollInterval);
           setPaymentStatus('confirmed');
-          
+
           // Verificar se há prêmio instantâneo
           await checkInstantPrize();
-          
+
           triggerConfetti();
           toast({
             title: "Pagamento Confirmado! 🎉",
             description: "Seus números foram reservados com sucesso!",
           });
-          
+
           setTimeout(() => {
             onSuccess();
           }, 2000);
@@ -170,7 +191,7 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
 
       if (prizes && prizes.length > 0) {
         const prize = prizes[0]; // Pegar o primeiro prêmio encontrado
-        
+
         // Marcar como reivindicado
         await supabase
           .from('instant_prizes')
@@ -182,7 +203,7 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
           .eq('id', prize.id);
 
         setInstantPrize(prize);
-        
+
         // Confete extra para prêmio instantâneo
         setTimeout(() => {
           confetti({
@@ -223,12 +244,12 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
               🎉 Pagamento Confirmado!
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="text-center space-y-4">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
               <span className="text-green-600 text-2xl">✓</span>
             </div>
-            
+
             <div>
               <h3 className="text-lg font-semibold mb-2">Sucesso!</h3>
               <p className="text-muted-foreground">
@@ -271,7 +292,7 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
 
             <div className="space-y-3">
               <AffiliateSignupButton />
-              
+
               <Button onClick={onClose} className="w-full">
                 Continuar
               </Button>
@@ -290,7 +311,7 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
             Pagamento via PIX
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           <div className="bg-primary/10 rounded-lg p-4">
             <div className="flex justify-between items-center mb-2">
@@ -320,20 +341,20 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
               <>
                 <div className="text-center">
                   <div className="w-64 h-64 mx-auto mb-4 bg-white rounded-lg p-4 flex items-center justify-center">
-                    {pixData.qr_code_image ? (
-                      <img 
-                        src={pixData.qr_code_image} 
-                        alt="QR Code PIX" 
+                    {generatedQrCode ? (
+                      <img
+                        src={generatedQrCode}
+                        alt="QR Code PIX"
                         className="w-full h-full object-contain"
                       />
                     ) : (
                       <div className="text-muted-foreground">
                         <QrCode className="w-16 h-16 mx-auto mb-2" />
-                        QR Code será exibido aqui
+                        Gerando QR Code...
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="space-y-3">
                     <div>
                       <label className="block text-sm font-medium mb-2">Código PIX (Copia e Cola)</label>

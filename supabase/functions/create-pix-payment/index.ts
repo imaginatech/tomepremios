@@ -17,7 +17,7 @@ const createSignature = async (payload: string, signatureToken: string): Promise
   const encoder = new TextEncoder();
   const keyData = encoder.encode(signatureToken);
   const messageData = encoder.encode(payload);
-  
+
   const key = await crypto.subtle.importKey(
     'raw',
     keyData,
@@ -25,7 +25,7 @@ const createSignature = async (payload: string, signatureToken: string): Promise
     false,
     ['sign']
   );
-  
+
   const signature = await crypto.subtle.sign('HMAC', key, messageData);
   return Array.from(new Uint8Array(signature))
     .map(b => b.toString(16).padStart(2, '0'))
@@ -52,7 +52,7 @@ serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userError } = await supabase.auth.getUser(token);
     if (userError) throw new Error(`Erro de autenticação: ${userError.message}`);
-    
+
     const user = userData.user;
     if (!user?.id) throw new Error("Usuário não autenticado");
     logStep("Usuário autenticado", { userId: user.id });
@@ -77,36 +77,22 @@ serve(async (req) => {
     }
     logStep("Sorteio ativo encontrado", { raffleId: raffle.id });
 
-    // Verificar se números ainda estão disponíveis
-    const { data: existingTickets, error: ticketsError } = await supabase
-      .from('raffle_tickets')
-      .select('ticket_number')
-      .eq('raffle_id', raffle.id)
-      .in('ticket_number', selectedNumbers)
-      .eq('payment_status', 'paid');
-
-    if (ticketsError) {
-      throw new Error(`Erro ao verificar números: ${ticketsError.message}`);
-    }
-
-    if (existingTickets && existingTickets.length > 0) {
-      const unavailableNumbers = existingTickets.map(t => t.ticket_number);
-      throw new Error(`Números já vendidos: ${unavailableNumbers.join(', ')}`);
-    }
+    // Verificacao de disponibilidade removida para modo Loteria (Mega Sena)
+    // Multiplos usuarios podem escolher os mesmos numeros
 
     // Verificar se secrets estão configurados
     const clientKey = Deno.env.get("PAGGUE_CLIENT_KEY");
     const clientSecret = Deno.env.get("PAGGUE_CLIENT_SECRET");
     const companyId = Deno.env.get("PAGGUE_COMPANY_ID");
     const signatureToken = Deno.env.get("PAGGUE_SIGNATURE_TOKEN");
-    
-    logStep("Verificando secrets", { 
-      hasClientKey: !!clientKey, 
+
+    logStep("Verificando secrets", {
+      hasClientKey: !!clientKey,
       hasClientSecret: !!clientSecret,
       hasCompanyId: !!companyId,
       hasSignatureToken: !!signatureToken
     });
-    
+
     if (!clientKey || !clientSecret || !companyId || !signatureToken) {
       throw new Error("Secrets da Paggue não configurados. Verifique PAGGUE_CLIENT_KEY, PAGGUE_CLIENT_SECRET, PAGGUE_COMPANY_ID e PAGGUE_SIGNATURE_TOKEN");
     }
@@ -116,9 +102,9 @@ serve(async (req) => {
       client_key: clientKey,
       client_secret: clientSecret
     };
-    
+
     logStep("Autenticando na Paggue", { client_key: clientKey });
-    
+
     const paggueAuthResponse = await fetch('https://ms.paggue.io/auth/v1/token', {
       method: 'POST',
       headers: {
@@ -180,7 +166,7 @@ serve(async (req) => {
     const transactionHash = paymentResult.hash; // Hash da transação
     const paymentStatus = paymentResult.status; // 0 = pending, 1 = paid
 
-    logStep("Dados extraídos", { 
+    logStep("Dados extraídos", {
       pixCode: pixCode ? pixCode.substring(0, 50) + "..." : null,
       transactionHash,
       paymentStatus
@@ -226,10 +212,10 @@ serve(async (req) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERRO", { message: errorMessage });
-    
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: errorMessage 
+
+    return new Response(JSON.stringify({
+      success: false,
+      error: errorMessage
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400

@@ -18,50 +18,32 @@ const RaffleSelector = () => {
   const [showPixModal, setShowPixModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [activeRaffleId, setActiveRaffleId] = useState<string | null>(null);
-  
+
   const { user } = useAuth();
   const { toast } = useToast();
 
   // Carregar dados do sorteio ativo e configurar realtime
   useEffect(() => {
-    loadRaffleAndSoldNumbers();
+    loadRaffle();
   }, []);
 
-  // Configurar realtime quando temos um sorteio ativo
+  // Realtime updates removidos para modo Loteria
+  /* 
   useEffect(() => {
     if (!activeRaffleId) return;
-
-    const channel = supabase
-      .channel('raffle-selector-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'raffle_tickets',
-          filter: `raffle_id=eq.${activeRaffleId}`
-        },
-        (payload) => {
-          console.log('Atualização de tickets detectada no RaffleSelector:', payload);
-          loadSoldNumbers();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    ...
   }, [activeRaffleId]);
+  */
 
-  const loadRaffleAndSoldNumbers = async () => {
+  const loadRaffle = async () => {
     try {
       console.log('Iniciando carregamento do RaffleSelector...');
       setIsLoading(true);
-      
+
       // Buscar sorteio ativo
       const { data: raffle, error: raffleError } = await supabase
         .from('raffles')
-        .select('id')
+        .select('id, ticket_price')
         .eq('status', 'active')
         .order('created_at', { ascending: false })
         .limit(1)
@@ -81,10 +63,10 @@ const RaffleSelector = () => {
         return;
       }
 
-      console.log('Sorteio ativo encontrado, carregando números vendidos...');
+      console.log('Sorteio ativo encontrado');
       setActiveRaffleId(raffle.id);
-      await loadSoldNumbers(raffle.id);
-      
+      // Não carregamos números vendidos no modo Loteria
+
       setIsLoading(false);
     } catch (error) {
       console.error('Erro ao carregar dados do RaffleSelector:', error);
@@ -92,57 +74,32 @@ const RaffleSelector = () => {
     }
   };
 
-  const loadSoldNumbers = async (raffleId?: string) => {
-    try {
-      const targetRaffleId = raffleId || activeRaffleId;
-      console.log('loadSoldNumbers chamado com:', { raffleId, activeRaffleId, targetRaffleId });
-      
-      if (!targetRaffleId) {
-        console.log('Nenhum raffleId fornecido, interrompendo...');
-        return;
-      }
-
-      console.log('Buscando números vendidos para raffle:', targetRaffleId);
-
-      // Buscar números já vendidos do sorteio ativo específico
-      const { data, error } = await supabase
-        .from('raffle_tickets')
-        .select('ticket_number')
-        .eq('raffle_id', targetRaffleId)
-        .eq('payment_status', 'paid');
-
-      console.log('Resultado busca números vendidos:', { data, error });
-
-      if (error) {
-        console.error('Erro ao carregar números vendidos:', error);
-        return;
-      }
-
-      const sold = data?.map(ticket => ticket.ticket_number) || [];
-      console.log('Números vendidos encontrados:', sold);
-      setSoldNumbers(sold);
-    } catch (error) {
-      console.error('Erro ao carregar números vendidos:', error);
-    } finally {
-      if (!raffleId) {
-        console.log('Finalizando loading...');
-        setIsLoading(false);
-      }
-    }
-  };
+  // loadSoldNumbers removido
 
 
-  // Gerar números de 1 a 200
-  const allNumbers = Array.from({ length: 200 }, (_, i) => i + 1);
+  // Gerar números de 1 a 60
+  const allNumbers = Array.from({ length: 60 }, (_, i) => i + 1);
 
   const toggleNumber = (number: number) => {
-    if (soldNumbers.includes(number)) return;
-    
-    setSelectedNumbers(prev => 
-      prev.includes(number) 
-        ? prev.filter(n => n !== number)
-        : [...prev, number]
-    );
+    // No modo loteria não verificamos soldNumbers
+    // if (soldNumbers.includes(number)) return;
+
+    setSelectedNumbers(prev => {
+      const isSelected = prev.includes(number);
+      if (isSelected) {
+        return prev.filter(n => n !== number);
+      } else {
+        if (prev.length >= 12) {
+          toast({
+            title: "Limite de números",
+            description: "Você só pode escolher 12 números.",
+            variant: "destructive",
+          });
+          return prev;
+        }
+        return [...prev, number];
+      }
+    });
   };
 
   const clearSelection = () => {
@@ -150,10 +107,10 @@ const RaffleSelector = () => {
   };
 
   const handlePayment = () => {
-    if (selectedNumbers.length === 0) {
+    if (selectedNumbers.length !== 12) {
       toast({
         title: "Atenção",
-        description: "Selecione pelo menos um número para continuar",
+        description: "Selecione exatamente 12 números para continuar",
         variant: "destructive",
       });
       return;
@@ -175,20 +132,21 @@ const RaffleSelector = () => {
   };
 
   const handlePixSuccess = () => {
-    // Recarregar números vendidos após pagamento bem-sucedido
-    loadSoldNumbers();
-    
+    // Não recarregamos números vendidos
+    // loadSoldNumbers();
+
     // Limpar seleção após pagamento bem-sucedido
     setSelectedNumbers([]);
     setShowPixModal(false);
-    
+
     toast({
       title: "Parabéns! 🎉",
       description: "Você está participando do sorteio! Boa sorte!",
     });
   };
 
-  const total = selectedNumbers.length * 5;
+  // Preço fixo para a aposta de 12 números
+  const total = selectedNumbers.length === 12 ? 5 : 0;
 
   return (
     <>
@@ -196,10 +154,10 @@ const RaffleSelector = () => {
         <div className="container mx-auto px-4">
           <div className="text-center mb-8">
             <h2 className="text-3xl md:text-4xl font-bold mb-4 golden-text">
-              Escolha Seus Números da Sorte
+              Escolha Seus 12 Números da Sorte
             </h2>
             <p className="text-lg text-muted-foreground mb-6">
-              Selecione quantos números quiser • R$ 5,00 cada título
+              Selecione exatamente 12 números • R$ 5,00 por aposta
             </p>
           </div>
 
@@ -219,10 +177,7 @@ const RaffleSelector = () => {
                         <div className="w-4 h-4 bg-accent rounded mr-2"></div>
                         <span>Selecionado</span>
                       </div>
-                      <div className="flex items-center">
-                        <div className="w-4 h-4 bg-muted rounded mr-2"></div>
-                        <span>Vendido</span>
-                      </div>
+                      {/* Removido "Vendido" */}
                     </div>
                   </div>
                   {selectedNumbers.length > 0 && (
@@ -243,15 +198,14 @@ const RaffleSelector = () => {
                     {allNumbers.map(number => {
                       const isSelected = selectedNumbers.includes(number);
                       const isSold = soldNumbers.includes(number);
-                      
+
                       return (
                         <button
                           key={number}
                           onClick={() => toggleNumber(number)}
-                          className={`title-number ${
-                            isSold ? 'sold' : isSelected ? 'selected' : 'available'
-                          }`}
-                          disabled={isSold}
+                          className={`title-number ${isSelected ? 'selected' : 'available'
+                            }`}
+                        // disabled={isSold}
                         >
                           {String(number).padStart(3, '0')}
                         </button>
@@ -289,11 +243,11 @@ const RaffleSelector = () => {
 
                     <div className="border-t pt-4 mb-4">
                       <div className="flex justify-between items-center mb-2">
-                        <span>Quantidade:</span>
-                        <span className="font-semibold">{selectedNumbers.length} título{selectedNumbers.length > 1 ? 's' : ''}</span>
+                        <span>Números selecionados:</span>
+                        <span className="font-semibold">{selectedNumbers.length} / 12</span>
                       </div>
                       <div className="flex justify-between items-center mb-4">
-                        <span>Valor por título:</span>
+                        <span>Valor da Aposta:</span>
                         <span className="font-semibold">R$ 5,00</span>
                       </div>
                       <div className="flex justify-between items-center text-lg font-bold border-t pt-2">
@@ -302,8 +256,8 @@ const RaffleSelector = () => {
                       </div>
                     </div>
 
-                    <Button 
-                      className="w-full btn-pix text-white" 
+                    <Button
+                      className="w-full btn-pix text-white"
                       size="lg"
                       onClick={handlePayment}
                     >
