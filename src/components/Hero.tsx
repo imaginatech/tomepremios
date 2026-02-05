@@ -159,8 +159,8 @@ const Hero = () => {
       <div className="container mx-auto px-4 relative z-10">
         {/* Banner de Prêmios Instantâneos */}
         <div className="mb-6">
-          <Card className="bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 text-white p-4 border-0 relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 via-blue-500/20 to-blue-600/20 animate-pulse"></div>
+          <Card className="bg-gradient-to-r from-purple-600 via-pink-500 to-yellow-400 text-white p-4 border-0 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 via-pink-400/20 to-yellow-300/20 animate-pulse"></div>
             <div className="relative z-10">
               <div className="flex items-center justify-center gap-2 text-center">
                 <span className="text-2xl animate-bounce">⭐</span>
