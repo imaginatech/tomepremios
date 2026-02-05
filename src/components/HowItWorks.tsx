@@ -8,7 +8,7 @@ const HowItWorks = () => {
     {
       icon: Smartphone,
       title: 'Escolha seus Números',
-      description: 'Selecione quantos números quiser entre 001 e 200. Cada título custa apenas R$ 5,00.',
+      description: 'Selecione quantos números quiser entre 01 e 60. Cada aposta custa apenas R$ 5,00.',
       color: 'bg-primary'
     },
     {
