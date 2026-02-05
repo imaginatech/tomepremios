@@ -184,11 +184,11 @@ const Hero = () => {
               <div className="flex items-center justify-center gap-2 text-center">
                 <span className="text-2xl animate-bounce">🎭</span>
                 <div>
-                  <h2 className="text-lg md:text-xl font-bold mb-1 whitespace-nowrap">
+                <h2 className="text-lg md:text-xl font-bold mb-1 whitespace-nowrap">
                     HOJE É O SEU DIA DE SORTE!
                   </h2>
                   <p className="text-sm md:text-base opacity-95">
-                    Faça sua fezinha na loteria da Tome prêmios e passe o Carnaval tranquilo!
+                    Enquanto a cidade dorme a sorte chega na primeira hora da madrugada!
                   </p>
                 </div>
                 <span className="text-2xl animate-bounce delay-200">🎉</span>
