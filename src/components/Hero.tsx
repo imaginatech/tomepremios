@@ -169,7 +169,7 @@ const Hero = () => {
                     HOJE É O SEU DIA DE SORTE!
                   </h2>
                   <p className="text-sm md:text-base opacity-95">
-                    Faça sua fezinha na loteria da Tome prêmios e passe o Natal tranquilo!
+                    Faça sua fezinha na loteria da Tome prêmios e passe o Carnaval tranquilo!
                   </p>
                 </div>
                 <span className="text-2xl animate-bounce delay-200">💸</span>
