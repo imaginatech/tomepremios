@@ -82,14 +82,14 @@ serve(async (req) => {
             });
         }
 
-        // 3. Realizar Sorteio (6 números de 1 a 60)
+        // 3. Realizar Sorteio (12 números de 1 a 60)
         const drawnNumbers = new Set<number>();
-        while (drawnNumbers.size < 6) {
+        while (drawnNumbers.size < 12) {
             drawnNumbers.add(Math.floor(Math.random() * 60) + 1);
         }
         const drawnArray = Array.from(drawnNumbers).sort((a, b) => a - b);
 
-        console.log(`Sorteio ${raffle.id} realizado: ${drawnArray.join(', ')}`);
+        console.log(`Sorteio ${raffle.id} realizado com 12 dezenas: ${drawnArray.join(', ')}`);
 
         // 4. Calcular Premiação e Buscar Vencedores
         const { data: bets, error: betsError } = await supabase
