@@ -161,9 +161,28 @@ const Hero = () => {
         <div className="mb-6">
           <Card className="bg-gradient-to-r from-purple-600 via-pink-500 to-yellow-400 text-white p-4 border-0 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 via-pink-400/20 to-yellow-300/20 animate-pulse"></div>
+            
+            {/* Confetes animados */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              {[...Array(20)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute w-2 h-2 rounded-full animate-bounce"
+                  style={{
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                    backgroundColor: ['#FFD700', '#FF69B4', '#9B59B6', '#2ECC71', '#E74C3C', '#3498DB'][i % 6],
+                    animationDelay: `${Math.random() * 2}s`,
+                    animationDuration: `${1 + Math.random() * 2}s`,
+                    transform: `rotate(${Math.random() * 360}deg)`,
+                  }}
+                />
+              ))}
+            </div>
+
             <div className="relative z-10">
               <div className="flex items-center justify-center gap-2 text-center">
-                <span className="text-2xl animate-bounce">⭐</span>
+                <span className="text-2xl animate-bounce">🎭</span>
                 <div>
                   <h2 className="text-lg md:text-xl font-bold mb-1 whitespace-nowrap">
                     HOJE É O SEU DIA DE SORTE!
@@ -172,7 +191,7 @@ const Hero = () => {
                     Faça sua fezinha na loteria da Tome prêmios e passe o Carnaval tranquilo!
                   </p>
                 </div>
-                <span className="text-2xl animate-bounce delay-200">💸</span>
+                <span className="text-2xl animate-bounce delay-200">🎉</span>
               </div>
             </div>
           </Card>
