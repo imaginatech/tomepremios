@@ -162,24 +162,6 @@ const Hero = () => {
           <Card className="bg-gradient-to-r from-emerald-600 via-green-500 to-teal-400 text-white p-4 border-0 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-400/20 via-green-400/20 to-teal-300/20 animate-pulse"></div>
             
-            {/* Confetes animados */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              {[...Array(20)].map((_, i) => (
-                <div
-                  key={i}
-                  className="absolute w-2 h-2 rounded-full animate-bounce"
-                  style={{
-                    left: `${Math.random() * 100}%`,
-                    top: `${Math.random() * 100}%`,
-                    backgroundColor: ['#FFD700', '#FF69B4', '#9B59B6', '#2ECC71', '#E74C3C', '#3498DB'][i % 6],
-                    animationDelay: `${Math.random() * 2}s`,
-                    animationDuration: `${1 + Math.random() * 2}s`,
-                    transform: `rotate(${Math.random() * 360}deg)`,
-                  }}
-                />
-              ))}
-            </div>
-
             <div className="relative z-10">
               <div className="flex items-center justify-center gap-2 text-center">
                 <span className="text-2xl animate-bounce">🎭</span>
