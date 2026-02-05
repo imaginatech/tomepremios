@@ -140,7 +140,7 @@ const Winners = () => {
                 <div className="p-6">
                   <div className="mb-6">
                     <h4 className="text-sm font-medium text-muted-foreground mb-3 text-center">12 Dezenas Sorteadas</h4>
-                    <div className="grid grid-cols-6 gap-2 justify-items-center">
+                    <div className="grid grid-cols-6 gap-1 justify-items-center">
                       {result.drawn_numbers.map((num, i) => (
                         <div key={i} className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-sm">
                           {String(num).padStart(2, '0')}
