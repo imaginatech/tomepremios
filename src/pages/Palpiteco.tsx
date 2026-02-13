@@ -21,6 +21,7 @@ interface PollOption {
 interface Poll {
   id: string;
   title: string;
+  question: string | null;
   options: PollOption[];
   winning_option: number | null;
   prize_amount: number;
