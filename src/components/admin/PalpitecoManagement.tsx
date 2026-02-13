@@ -1,5 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
+import PalpitecoSettings from './PalpitecoSettings';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -117,6 +117,8 @@ const PalpitecoManagement = () => {
 
   return (
     <div className="space-y-6">
+      <PalpitecoSettings />
+
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-foreground">Gestão do Palpiteco</h2>
         <Button onClick={() => setShowCreate(true)}><Plus className="w-4 h-4 mr-2" /> Nova Enquete</Button>
