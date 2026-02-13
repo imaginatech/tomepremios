@@ -52,8 +52,8 @@ const GameCards = () => {
               <h3 className="text-2xl font-bold text-accent-foreground">Palpitaco</h3>
             </div>
             <CardContent className="p-6">
-              <p className="text-muted-foreground mb-4 text-center">
-                Dê seu palpite em enquetes e ganhe prêmios! Escolha a opção certa e leve o prêmio pra casa.
+              <p className="text-muted-foreground mb-4 text-center">Dê seu palpite, participe das enquetes e transforme sua escolha em um prêmio incrível!
+
               </p>
               <Button className="w-full btn-gold text-white group-hover:scale-105 transition-transform">
                 Participar <ArrowRight className="w-4 h-4 ml-2" />
