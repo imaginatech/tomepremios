@@ -191,8 +191,8 @@ const PalpitecoManagement = () => {
           <DialogHeader><DialogTitle>Nova Enquete</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Pergunta</Label>
-              <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Quem ganha o clássico?" />
+              <Label>Título da Enquete</Label>
+              <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: BBB 2026 – Paredão" />
             </div>
             <div>
               <Label>Opções de Resposta</Label>
