@@ -366,6 +366,7 @@ export type Database = {
           id: string
           options: Json
           prize_amount: number
+          question: string | null
           status: string
           title: string
           updated_at: string
@@ -378,6 +379,7 @@ export type Database = {
           id?: string
           options?: Json
           prize_amount?: number
+          question?: string | null
           status?: string
           title: string
           updated_at?: string
@@ -390,6 +392,7 @@ export type Database = {
           id?: string
           options?: Json
           prize_amount?: number
+          question?: string | null
           status?: string
           title?: string
           updated_at?: string

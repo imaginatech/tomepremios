@@ -18,6 +18,7 @@ interface PollOption {
 interface Poll {
   id: string;
   title: string;
+  question: string | null;
   options: PollOption[];
   winning_option: number | null;
   prize_amount: number;
@@ -37,6 +38,7 @@ const PalpitecoManagement = () => {
 
   // Form state
   const [title, setTitle] = useState('');
+  const [question, setQuestion] = useState('');
   const [options, setOptions] = useState<string[]>(['', '']);
   const [prizeAmount, setPrizeAmount] = useState('');
   const [entryPrice, setEntryPrice] = useState('5');
@@ -66,11 +68,12 @@ const PalpitecoManagement = () => {
     setSaving(true);
     const { error } = await supabase.from('polls').insert({
       title,
+      question: question || null,
       options: options.map(label => ({ label })),
       prize_amount: parseFloat(prizeAmount),
       entry_price: parseFloat(entryPrice),
       category: category || null,
-    });
+    } as any);
     setSaving(false);
     if (error) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
@@ -83,7 +86,7 @@ const PalpitecoManagement = () => {
   };
 
   const resetForm = () => {
-    setTitle(''); setOptions(['', '']); setPrizeAmount(''); setEntryPrice('5'); setCategory('');
+    setTitle(''); setQuestion(''); setOptions(['', '']); setPrizeAmount(''); setEntryPrice('5'); setCategory('');
   };
 
   const setWinner = async (pollId: string, winningOption: number) => {
@@ -193,6 +196,10 @@ const PalpitecoManagement = () => {
             <div>
               <Label>Título da Enquete</Label>
               <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: BBB 2026 – Paredão" />
+            </div>
+            <div>
+              <Label>Pergunta</Label>
+              <Input value={question} onChange={e => setQuestion(e.target.value)} placeholder="Ex: Quem será eliminado?" />
             </div>
             <div>
               <Label>Opções de Resposta</Label>

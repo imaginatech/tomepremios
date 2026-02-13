@@ -14,6 +14,7 @@ interface PollOption {
 interface Poll {
   id: string;
   title: string;
+  question: string | null;
   options: PollOption[];
   winning_option?: number | null;
   prize_amount: number;
@@ -50,6 +51,9 @@ const PollCard: React.FC<PollCardProps> = ({ poll, onParticipate, hasParticipate
           )}
         </div>
         <CardTitle className="text-lg leading-tight">{poll.title}</CardTitle>
+        {poll.question && (
+          <p className="text-sm text-muted-foreground mt-1">{poll.question}</p>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center gap-2 text-accent">
