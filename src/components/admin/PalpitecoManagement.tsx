@@ -120,7 +120,7 @@ const PalpitecoManagement = () => {
       <PalpitecoSettings />
 
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-foreground">Gestão do Palpiteco</h2>
+        <h2 className="text-2xl font-bold text-foreground">Gestão do Palpitaco</h2>
         <Button onClick={() => setShowCreate(true)}><Plus className="w-4 h-4 mr-2" /> Nova Enquete</Button>
       </div>
 

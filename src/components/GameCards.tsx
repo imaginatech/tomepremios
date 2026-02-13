@@ -49,7 +49,7 @@ const GameCards = () => {
               <div className="w-16 h-16 bg-accent-foreground/20 rounded-full flex items-center justify-center mx-auto mb-3">
                 <HelpCircle className="w-8 h-8 text-accent-foreground" />
               </div>
-              <h3 className="text-2xl font-bold text-accent-foreground">Palpiteco</h3>
+              <h3 className="text-2xl font-bold text-accent-foreground">Palpitaco</h3>
             </div>
             <CardContent className="p-6">
               <p className="text-muted-foreground mb-4 text-center">

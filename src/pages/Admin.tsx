@@ -87,7 +87,7 @@ const Admin = () => {
               <TabsTrigger value="users">Usuários</TabsTrigger>
               <TabsTrigger value="winners">Ganhadores</TabsTrigger>
               <TabsTrigger value="instant-prizes">Instantâneos</TabsTrigger>
-              <TabsTrigger value="palpiteco">Palpiteco</TabsTrigger>
+              <TabsTrigger value="palpiteco">Palpitaco</TabsTrigger>
               <TabsTrigger value="affiliates">Afiliados</TabsTrigger>
               <TabsTrigger value="settings">Config</TabsTrigger>
             </TabsList>
