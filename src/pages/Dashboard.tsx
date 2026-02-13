@@ -8,6 +8,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import UserProfile from '@/components/dashboard/UserProfile';
 import ActiveRaffles from '@/components/dashboard/ActiveRaffles';
+import MyPolls from '@/components/dashboard/MyPolls';
 import UrgencyAlerts from '@/components/dashboard/UrgencyAlerts';
 import UserStats from '@/components/dashboard/UserStats';
 
@@ -95,6 +96,7 @@ const Dashboard = () => {
             <div className="lg:col-span-2 space-y-6">
               <UserProfile />
               <ActiveRaffles />
+              <MyPolls />
             </div>
 
             {/* Sidebar */}
