@@ -71,13 +71,13 @@ const PalpitecoHero = () => {
 
           <Button
             size="lg"
-            className="btn-pix text-lg px-12 py-6 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 animate-pulse text-white"
+            className="btn-pix text-sm md:text-lg px-6 md:px-12 py-4 md:py-6 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 animate-pulse text-white w-full md:w-auto max-w-full"
             onClick={() => {
               const section = document.getElementById('enquetes');
               section?.scrollIntoView({ behavior: 'smooth' });
             }}
           >
-            <DollarSign className="w-6 h-6 mr-2" />
+            <DollarSign className="w-5 h-5 md:w-6 md:h-6 mr-2 shrink-0" />
             VER ENQUETES DISPONÍVEIS
           </Button>
         </div>
