@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { HelpCircle, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { HelpCircle, CheckCircle2, XCircle, Clock, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
+
+type VoteCounts = Record<string, Record<number, number>>;
 
 interface PollOption {
   label: string;
@@ -33,11 +36,15 @@ interface PollEntry {
 const MyPolls = () => {
   const { user } = useAuth();
   const [entries, setEntries] = useState<PollEntry[]>([]);
+  const [voteCounts, setVoteCounts] = useState<VoteCounts>({});
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user) fetchEntries();
+    if (user) {
+      fetchEntries();
+      fetchVoteCounts();
+    }
   }, [user]);
 
   const fetchEntries = async () => {
@@ -85,6 +92,35 @@ const MyPolls = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchVoteCounts = async () => {
+    try {
+      const { data } = await supabase
+        .from('poll_entries')
+        .select('poll_id, selected_option')
+        .eq('payment_status', 'paid');
+      if (!data) return;
+      const counts: VoteCounts = {};
+      data.forEach(e => {
+        if (!counts[e.poll_id]) counts[e.poll_id] = {};
+        counts[e.poll_id][e.selected_option] = (counts[e.poll_id][e.selected_option] || 0) + 1;
+      });
+      setVoteCounts(counts);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const getTotalVotes = (pollId: string) => {
+    const c = voteCounts[pollId];
+    return c ? Object.values(c).reduce((a, b) => a + b, 0) : 0;
+  };
+
+  const getPercentage = (pollId: string, optionIndex: number) => {
+    const total = getTotalVotes(pollId);
+    if (total === 0) return 0;
+    return Math.round(((voteCounts[pollId]?.[optionIndex] || 0) / total) * 100);
   };
 
   const getResult = (entry: PollEntry) => {
@@ -201,6 +237,33 @@ const MyPolls = () => {
                       </div>
                     )}
                   </div>
+
+                  {/* Porcentagem de respostas */}
+                  {getTotalVotes(poll.id) > 0 && (
+                    <div className="space-y-2 px-1">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <BarChart3 className="w-3 h-3" />
+                        <span>{getTotalVotes(poll.id)} {getTotalVotes(poll.id) === 1 ? 'voto' : 'votos'}</span>
+                      </div>
+                      {poll.options.map((option, idx) => {
+                        const pct = getPercentage(poll.id, idx);
+                        const isUserChoice = entry.selected_option === idx;
+                        return (
+                          <div key={idx} className="space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <span className={isUserChoice ? 'font-bold text-primary' : 'text-muted-foreground'}>
+                                {option.label} {isUserChoice && '👈'}
+                              </span>
+                              <span className={isUserChoice ? 'font-bold text-primary' : 'text-muted-foreground'}>
+                                {pct}%
+                              </span>
+                            </div>
+                            <Progress value={pct} className="h-2" />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
 
                   <div className="text-xs text-muted-foreground text-right">
                     Palpite em {format(new Date(entry.created_at), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
