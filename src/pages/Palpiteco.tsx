@@ -2,6 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import PalpitecoHero from '@/components/palpiteco/PalpitecoHero';
+import PalpitecoWinners from '@/components/palpiteco/PalpitecoWinners';
+import PalpitecoHowItWorks from '@/components/palpiteco/PalpitecoHowItWorks';
 import PollCard from '@/components/palpiteco/PollCard';
 import PalpitecoPaymentModal from '@/components/palpiteco/PalpitecoPaymentModal';
 import AuthModal from '@/components/AuthModal';
@@ -114,70 +117,81 @@ const Palpiteco = () => {
     });
   };
 
+  const activePolls = polls.filter(p => p.status === 'active');
   const filteredPolls = activeCategory === 'Todos'
-    ? polls
-    : polls.filter(p => p.category === activeCategory);
+    ? activePolls
+    : activePolls.filter(p => p.category === activeCategory);
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="container mx-auto px-4 py-8">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 bg-accent text-accent-foreground px-4 py-2 rounded-full mb-4">
-            <HelpCircle className="w-5 h-5" />
-            <span className="font-bold">PALPITECO</span>
-          </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">Dê seu Palpite e Ganhe!</h1>
-          <p className="text-muted-foreground">Escolha a opção certa e leve o prêmio pra casa</p>
-        </div>
+      <main>
+        <PalpitecoHero />
 
-        {/* Category filters */}
-        <div className="flex gap-2 overflow-x-auto pb-4 mb-6 justify-center flex-wrap">
-          {categories.map(cat => (
-            <Button
-              key={cat}
-              variant={activeCategory === cat ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setActiveCategory(cat)}
-              className="whitespace-nowrap"
-            >
-              {cat}
-            </Button>
-          ))}
-        </div>
+        {/* Enquetes Ativas */}
+        <section className="py-12" id="enquetes">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 golden-text">
+                Enquetes Disponíveis
+              </h2>
+              <p className="text-lg text-muted-foreground">
+                Escolha uma enquete, dê seu palpite e concorra!
+              </p>
+            </div>
 
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            {/* Category filters */}
+            <div className="flex gap-2 overflow-x-auto pb-4 mb-6 justify-center flex-wrap">
+              {categories.map(cat => (
+                <Button
+                  key={cat}
+                  variant={activeCategory === cat ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setActiveCategory(cat)}
+                  className="whitespace-nowrap"
+                >
+                  {cat}
+                </Button>
+              ))}
+            </div>
+
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : filteredPolls.length === 0 ? (
+              <div className="text-center py-12">
+                <HelpCircle className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground">Nenhuma enquete disponível nesta categoria.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredPolls.map(poll => {
+                  const entry = entries.find(e => e.poll_id === poll.id);
+                  return (
+                    <PollCard
+                      key={poll.id}
+                      poll={poll}
+                      onParticipate={handleParticipate}
+                      hasParticipated={!!entry}
+                      userSelection={entry?.selected_option}
+                    />
+                  );
+                })}
+              </div>
+            )}
           </div>
-        ) : filteredPolls.length === 0 ? (
-          <div className="text-center py-12">
-            <HelpCircle className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">Nenhuma enquete disponível nesta categoria.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredPolls.map(poll => {
-              const entry = entries.find(e => e.poll_id === poll.id);
-              return (
-                <PollCard
-                  key={poll.id}
-                  poll={poll}
-                  onParticipate={handleParticipate}
-                  hasParticipated={!!entry}
-                  userSelection={entry?.selected_option}
-                />
-              );
-            })}
-          </div>
-        )}
+        </section>
+
+        <PalpitecoWinners />
+        <PalpitecoHowItWorks />
       </main>
       <Footer />
 
       {paymentModal && (
         <PalpitecoPaymentModal
           isOpen={paymentModal.isOpen}
-          onClose={() => { setPaymentModal(null); }}
+          onClose={() => setPaymentModal(null)}
           onSuccess={() => { setPaymentModal(null); loadEntries(); loadPolls(); }}
           pollId={paymentModal.pollId}
           pollTitle={paymentModal.pollTitle}
