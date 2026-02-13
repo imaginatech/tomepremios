@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Trophy, DollarSign } from 'lucide-react';
+import { Trophy, DollarSign, BarChart3 } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 
 interface PollOption {
   label: string;
@@ -28,10 +29,17 @@ interface PollCardProps {
   onParticipate: (pollId: string, selectedOption: number) => void;
   hasParticipated: boolean;
   userSelection?: number;
+  voteCounts?: Record<number, number>;
 }
 
-const PollCard: React.FC<PollCardProps> = ({ poll, onParticipate, hasParticipated, userSelection }) => {
+const PollCard: React.FC<PollCardProps> = ({ poll, onParticipate, hasParticipated, userSelection, voteCounts }) => {
   const [selectedOption, setSelectedOption] = useState<string>('');
+
+  const totalVotes = voteCounts ? Object.values(voteCounts).reduce((a, b) => a + b, 0) : 0;
+  const getPercentage = (index: number) => {
+    if (!voteCounts || totalVotes === 0) return 0;
+    return Math.round(((voteCounts[index] || 0) / totalVotes) * 100);
+  };
 
   const statusMap: Record<string, { label: string; className: string }> = {
     active: { label: 'Aberta', className: 'bg-primary text-primary-foreground' },
@@ -64,22 +72,51 @@ const PollCard: React.FC<PollCardProps> = ({ poll, onParticipate, hasParticipate
         </div>
 
         {hasParticipated ? (
-          <div className="bg-primary/10 rounded-lg p-3 text-center">
-            <p className="text-sm font-medium text-primary">✅ Você já participou!</p>
-            {userSelection !== undefined && poll.options[userSelection] && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Sua escolha: <strong>{poll.options[userSelection].label}</strong>
-              </p>
-            )}
-            {poll.status === 'completed' && poll.winning_option !== undefined && poll.winning_option !== null && (
-              <p className="text-xs mt-1">
-                Resposta certa: <strong>{poll.options[poll.winning_option]?.label}</strong>
-                {userSelection === poll.winning_option ? (
-                  <span className="text-primary ml-1">🎉 Você acertou!</span>
-                ) : (
-                  <span className="text-destructive ml-1">❌</span>
-                )}
-              </p>
+          <div className="space-y-3">
+            <div className="bg-primary/10 rounded-lg p-3 text-center">
+              <p className="text-sm font-medium text-primary">✅ Você já participou!</p>
+              {userSelection !== undefined && poll.options[userSelection] && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Sua escolha: <strong>{poll.options[userSelection].label}</strong>
+                </p>
+              )}
+              {poll.status === 'completed' && poll.winning_option !== undefined && poll.winning_option !== null && (
+                <p className="text-xs mt-1">
+                  Resposta certa: <strong>{poll.options[poll.winning_option]?.label}</strong>
+                  {userSelection === poll.winning_option ? (
+                    <span className="text-primary ml-1">🎉 Você acertou!</span>
+                  ) : (
+                    <span className="text-destructive ml-1">❌</span>
+                  )}
+                </p>
+              )}
+            </div>
+
+            {/* Porcentagem de respostas */}
+            {totalVotes > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <BarChart3 className="w-3 h-3" />
+                  <span>{totalVotes} {totalVotes === 1 ? 'voto' : 'votos'}</span>
+                </div>
+                {poll.options.map((option, index) => {
+                  const pct = getPercentage(index);
+                  const isUserChoice = userSelection === index;
+                  return (
+                    <div key={index} className="space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <span className={isUserChoice ? 'font-bold text-primary' : 'text-muted-foreground'}>
+                          {option.label} {isUserChoice && '👈'}
+                        </span>
+                        <span className={isUserChoice ? 'font-bold text-primary' : 'text-muted-foreground'}>
+                          {pct}%
+                        </span>
+                      </div>
+                      <Progress value={pct} className="h-2" />
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         ) : poll.status === 'active' ? (

@@ -35,9 +35,13 @@ interface PollEntry {
   selected_option: number;
 }
 
+// Vote counts per option for each poll
+type VoteCounts = Record<string, Record<number, number>>;
+
 const Palpiteco = () => {
   const [polls, setPolls] = useState<Poll[]>([]);
   const [entries, setEntries] = useState<PollEntry[]>([]);
+  const [voteCounts, setVoteCounts] = useState<VoteCounts>({});
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [paymentModal, setPaymentModal] = useState<{
@@ -60,7 +64,10 @@ const Palpiteco = () => {
   }, []);
 
   useEffect(() => {
-    if (user) loadEntries();
+    if (user) {
+      loadEntries();
+      loadVoteCounts();
+    }
   }, [user]);
 
   const loadPolls = async () => {
@@ -94,6 +101,25 @@ const Palpiteco = () => {
         .eq('user_id', user.id)
         .eq('payment_status', 'paid');
       setEntries(data || []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const loadVoteCounts = async () => {
+    try {
+      const { data } = await supabase
+        .from('poll_entries')
+        .select('poll_id, selected_option')
+        .eq('payment_status', 'paid');
+      
+      if (!data) return;
+      const counts: VoteCounts = {};
+      data.forEach(entry => {
+        if (!counts[entry.poll_id]) counts[entry.poll_id] = {};
+        counts[entry.poll_id][entry.selected_option] = (counts[entry.poll_id][entry.selected_option] || 0) + 1;
+      });
+      setVoteCounts(counts);
     } catch (e) {
       console.error(e);
     }
@@ -176,6 +202,7 @@ const Palpiteco = () => {
                       onParticipate={handleParticipate}
                       hasParticipated={!!entry}
                       userSelection={entry?.selected_option}
+                      voteCounts={voteCounts[poll.id]}
                     />
                   );
                 })}
@@ -193,7 +220,7 @@ const Palpiteco = () => {
         <PalpitecoPaymentModal
           isOpen={paymentModal.isOpen}
           onClose={() => setPaymentModal(null)}
-          onSuccess={() => { setPaymentModal(null); loadEntries(); loadPolls(); }}
+          onSuccess={() => { setPaymentModal(null); loadEntries(); loadPolls(); loadVoteCounts(); }}
           pollId={paymentModal.pollId}
           pollTitle={paymentModal.pollTitle}
           selectedOption={paymentModal.selectedOption}
