@@ -89,7 +89,7 @@ const Header: React.FC<HeaderProps> = ({ affiliateCode }) => {
             <nav className="hidden md:flex items-center space-x-6">
               <a href="/" className="text-foreground hover:text-primary transition-colors">Início</a>
               <a href="/tome-premios" className="text-foreground hover:text-primary transition-colors">12 da Sorte</a>
-              <a href="/palpiteco" className="text-foreground hover:text-primary transition-colors">Palpiteco</a>
+              <a href="/palpiteco" className="text-foreground hover:text-primary transition-colors">Palpitaco</a>
             </nav>
 
             {/* User Actions */}
