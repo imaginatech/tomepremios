@@ -1,10 +1,20 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { HelpCircle, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
 
 const PalpitecoHero = () => {
+  const [bannerUrl, setBannerUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchBanner = async () => {
+      const { data } = await supabase.from('palpiteco_settings').select('banner_url').single();
+      if (data?.banner_url) setBannerUrl(data.banner_url);
+    };
+    fetchBanner();
+  }, []);
+
   return (
     <section className="relative py-12 md:py-20 overflow-hidden">
       <div className="absolute inset-0 gradient-dark opacity-50"></div>
@@ -13,25 +23,31 @@ const PalpitecoHero = () => {
 
       <div className="container mx-auto px-4 relative z-10">
         {/* Banner de destaque */}
-        <div className="mb-6">
-          <Card className="gradient-green text-foreground p-4 border-0 relative overflow-hidden">
-            <div className="absolute inset-0 bg-primary/10 animate-pulse"></div>
-            <div className="relative z-10">
-              <div className="flex items-center justify-center gap-2 text-center">
-                <span className="text-2xl animate-bounce">🤔</span>
-                <div>
-                  <h2 className="text-lg md:text-xl font-bold mb-1 text-white whitespace-nowrap">
-                    ACERTE O PALPITE E GANHE!
-                  </h2>
-                  <p className="text-sm md:text-base text-white/90">
-                    Escolha a opção certa nas enquetes e leve prêmios pra casa!
-                  </p>
+        {bannerUrl ? (
+          <div className="mb-6 rounded-lg overflow-hidden">
+            <img src={bannerUrl} alt="Banner Palpitaco" className="w-full h-auto object-cover rounded-lg" />
+          </div>
+        ) : (
+          <div className="mb-6">
+            <Card className="gradient-green text-foreground p-4 border-0 relative overflow-hidden">
+              <div className="absolute inset-0 bg-primary/10 animate-pulse"></div>
+              <div className="relative z-10">
+                <div className="flex items-center justify-center gap-2 text-center">
+                  <span className="text-2xl animate-bounce">🤔</span>
+                  <div>
+                    <h2 className="text-lg md:text-xl font-bold mb-1 text-white whitespace-nowrap">
+                      ACERTE O PALPITE E GANHE!
+                    </h2>
+                    <p className="text-sm md:text-base text-white/90">
+                      Escolha a opção certa nas enquetes e leve prêmios pra casa!
+                    </p>
+                  </div>
+                  <span className="text-2xl animate-bounce delay-200">💰</span>
                 </div>
-                <span className="text-2xl animate-bounce delay-200">💰</span>
               </div>
-            </div>
-          </Card>
-        </div>
+            </Card>
+          </div>
+        )}
 
         {/* Banner Principal */}
         <div className="mb-8 text-center">
@@ -39,7 +55,7 @@ const PalpitecoHero = () => {
             <div className="text-center">
               <div className="inline-flex items-center bg-background/20 rounded-full px-4 py-2 mb-4">
                 <HelpCircle className="w-5 h-5 mr-2 text-accent-foreground" />
-                <span className="font-semibold text-accent-foreground">PALPITECO</span>
+                <span className="font-semibold text-accent-foreground">PALPITACO</span>
               </div>
               <h1 className="text-3xl md:text-5xl font-bold mb-4 text-accent-foreground">
                 Dê seu Palpite e Ganhe!

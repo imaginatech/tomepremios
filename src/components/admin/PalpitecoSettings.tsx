@@ -101,7 +101,7 @@ const PalpitecoSettings = () => {
       <CardHeader>
         <CardTitle className="flex items-center text-xl">
           <Settings className="w-5 h-5 mr-2" />
-          Configurações do Palpiteco
+          Configurações do Palpitaco
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -111,7 +111,7 @@ const PalpitecoSettings = () => {
             <div className="space-y-2">
               <Label htmlFor="palpiteco_banner" className="flex items-center">
                 <ImageIcon className="w-4 h-4 mr-2" />
-                Banner do Palpiteco
+                Banner do Palpitaco
               </Label>
               <Input
                 id="palpiteco_banner"
@@ -129,7 +129,7 @@ const PalpitecoSettings = () => {
                 <div className="mt-2 relative w-full h-32 bg-muted rounded-md overflow-hidden">
                   <img
                     src={settings.banner_url}
-                    alt="Banner Palpiteco Preview"
+                    alt="Banner Palpitaco Preview"
                     className="w-full h-full object-cover"
                   />
                 </div>
