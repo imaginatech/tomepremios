@@ -28,7 +28,7 @@ const GameCards = () => {
               <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
                 <Trophy className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-2xl font-bold text-white">Tome Prêmios</h3>
+              <h3 className="text-2xl font-bold text-white">12 da Sorte</h3>
             </div>
             <CardContent className="p-6">
               <p className="text-muted-foreground mb-4 text-center">
