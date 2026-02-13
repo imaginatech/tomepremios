@@ -10,6 +10,8 @@ import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
 import AdminLogin from "./pages/AdminLogin";
 import ResetPassword from "./pages/ResetPassword";
+import TomePremios from "./pages/TomePremios";
+import Palpiteco from "./pages/Palpiteco";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +25,8 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/tome-premios" element={<TomePremios />} />
+            <Route path="/palpiteco" element={<Palpiteco />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/admin/login" element={<AdminLogin />} />
