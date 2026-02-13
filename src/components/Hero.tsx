@@ -188,7 +188,7 @@ const Hero = () => {
               <img
                 src={raffleData.bannerUrl}
                 alt="Banner do Sorteio"
-                className="w-full h-auto object-cover max-h-[500px]"
+                className="w-full h-auto object-contain md:object-cover max-h-[250px] md:max-h-[500px]"
               />
             </div>
           ) : (
