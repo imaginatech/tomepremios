@@ -289,6 +289,90 @@ export type Database = {
         }
         Relationships: []
       }
+      poll_entries: {
+        Row: {
+          created_at: string
+          id: string
+          payment_status: string
+          pix_payment_id: string | null
+          poll_id: string
+          selected_option: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          payment_status?: string
+          pix_payment_id?: string | null
+          poll_id: string
+          selected_option: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          payment_status?: string
+          pix_payment_id?: string | null
+          poll_id?: string
+          selected_option?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "poll_entries_pix_payment_id_fkey"
+            columns: ["pix_payment_id"]
+            isOneToOne: false
+            referencedRelation: "pix_payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "poll_entries_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      polls: {
+        Row: {
+          category: string | null
+          created_at: string
+          entry_price: number
+          id: string
+          options: Json
+          prize_amount: number
+          status: string
+          title: string
+          updated_at: string
+          winning_option: number | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          entry_price?: number
+          id?: string
+          options?: Json
+          prize_amount?: number
+          status?: string
+          title: string
+          updated_at?: string
+          winning_option?: number | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          entry_price?: number
+          id?: string
+          options?: Json
+          prize_amount?: number
+          status?: string
+          title?: string
+          updated_at?: string
+          winning_option?: number | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

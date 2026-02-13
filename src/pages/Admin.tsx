@@ -13,6 +13,7 @@ import WinnerManagement from '@/components/admin/WinnerManagement';
 import { AffiliateTestPanel } from '@/components/admin/AffiliateTestPanel';
 import { InstantPrizesManagement } from '@/components/admin/InstantPrizesManagement';
 import LotterySettings from '@/components/admin/LotterySettings';
+import PalpitecoManagement from '@/components/admin/PalpitecoManagement';
 import { Shield } from 'lucide-react';
 
 const Admin = () => {
@@ -80,14 +81,15 @@ const Admin = () => {
           </div>
 
           <Tabs defaultValue="dashboard" className="w-full">
-            <TabsList className="grid w-full grid-cols-7">
+            <TabsList className="grid w-full grid-cols-8">
               <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-              <TabsTrigger value="raffles">Gerenciar Edições</TabsTrigger>
+              <TabsTrigger value="raffles">Edições</TabsTrigger>
               <TabsTrigger value="users">Usuários</TabsTrigger>
               <TabsTrigger value="winners">Ganhadores</TabsTrigger>
               <TabsTrigger value="instant-prizes">Instantâneos</TabsTrigger>
+              <TabsTrigger value="palpiteco">Palpiteco</TabsTrigger>
               <TabsTrigger value="affiliates">Afiliados</TabsTrigger>
-              <TabsTrigger value="settings">Configurações</TabsTrigger>
+              <TabsTrigger value="settings">Config</TabsTrigger>
             </TabsList>
             <TabsContent value="dashboard">
               <AdminDashboard />
@@ -103,6 +105,9 @@ const Admin = () => {
             </TabsContent>
             <TabsContent value="instant-prizes">
               <InstantPrizesManagement />
+            </TabsContent>
+            <TabsContent value="palpiteco">
+              <PalpitecoManagement />
             </TabsContent>
             <TabsContent value="affiliates">
               <div className="space-y-6">

@@ -3,10 +3,12 @@ import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Header from '@/components/Header';
 import Hero from '@/components/Hero';
-import GameCards from '@/components/GameCards';
+import RaffleSelector from '@/components/RaffleSelector';
+import Winners from '@/components/Winners';
+import HowItWorks from '@/components/HowItWorks';
 import Footer from '@/components/Footer';
 
-const Index = () => {
+const TomePremios = () => {
   const [searchParams] = useSearchParams();
   const affiliateCode = searchParams.get('ref');
 
@@ -15,11 +17,13 @@ const Index = () => {
       <Header affiliateCode={affiliateCode} />
       <main>
         <Hero />
-        <GameCards />
+        <RaffleSelector />
+        <Winners />
+        <HowItWorks />
       </main>
       <Footer />
     </div>
   );
 };
 
-export default Index;
+export default TomePremios;

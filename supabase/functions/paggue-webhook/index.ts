@@ -168,39 +168,49 @@ serve(async (req) => {
 
     logStep("Status do pagamento atualizado para 'paid'");
 
-    // Criar a aposta (Bet)
-    const { error: ticketsError } = await supabase
-      .from('raffle_bets')
-      .insert({
-        raffle_id: pixPayment.raffle_id,
-        user_id: pixPayment.user_id,
-        numbers: pixPayment.selected_numbers,
-        status: 'paid'
-      });
+    // Verificar se é pagamento do Palpiteco (external_id começa com 'palpiteco_')
+    const isPalpiteco = (webhookData.external_id || '').startsWith('palpiteco_');
 
-    if (ticketsError) {
-      logStep("ERRO ao criar tickets", { error: ticketsError.message });
-      // Reverter status do pagamento se falhou ao criar tickets
-      await supabase
-        .from('pix_payments')
-        .update({ status: 'error' })
-        .eq('id', pixPayment.id);
-      
-      throw new Error(`Erro ao criar tickets: ${ticketsError.message}`);
+    if (isPalpiteco) {
+      // Atualizar poll_entry para paid
+      const { error: entryError } = await supabase
+        .from('poll_entries')
+        .update({ payment_status: 'paid' })
+        .eq('pix_payment_id', pixPayment.id);
+
+      if (entryError) {
+        logStep("ERRO ao atualizar poll_entry", { error: entryError.message });
+      } else {
+        logStep("Poll entry atualizado para paid");
+      }
+    } else {
+      // Criar a aposta (Bet) - fluxo original do Tome Prêmios
+      const { error: ticketsError } = await supabase
+        .from('raffle_bets')
+        .insert({
+          raffle_id: pixPayment.raffle_id,
+          user_id: pixPayment.user_id,
+          numbers: pixPayment.selected_numbers,
+          status: 'paid'
+        });
+
+      if (ticketsError) {
+        logStep("ERRO ao criar tickets", { error: ticketsError.message });
+        await supabase
+          .from('pix_payments')
+          .update({ status: 'error' })
+          .eq('id', pixPayment.id);
+        throw new Error(`Erro ao criar tickets: ${ticketsError.message}`);
+      }
+
+      logStep("Aposta criada com sucesso", { numbers: pixPayment.selected_numbers });
     }
-
-    logStep("Aposta criada com sucesso", { 
-      numbers: pixPayment.selected_numbers 
-    });
-
-    // Os triggers de afiliados serão executados automaticamente
-    // quando os tickets forem inseridos com payment_status='paid'
 
     return new Response(JSON.stringify({ 
       received: true, 
       processed: true,
       payment_id: pixPayment.id,
-      tickets_created: 1
+      type: isPalpiteco ? 'palpiteco' : 'raffle'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200

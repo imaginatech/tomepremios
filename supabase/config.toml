@@ -55,5 +55,8 @@ verify_jwt = false
 [functions.monthly-affiliate-payout]
 verify_jwt = false
 
+[functions.create-palpiteco-payment]
+verify_jwt = false
+
 [analytics]
 enabled = false
