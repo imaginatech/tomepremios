@@ -238,6 +238,30 @@ export type Database = {
         }
         Relationships: []
       }
+      palpiteco_settings: {
+        Row: {
+          banner_url: string | null
+          id: string
+          platform_percentage: number
+          updated_at: string | null
+          winners_percentage: number
+        }
+        Insert: {
+          banner_url?: string | null
+          id?: string
+          platform_percentage?: number
+          updated_at?: string | null
+          winners_percentage?: number
+        }
+        Update: {
+          banner_url?: string | null
+          id?: string
+          platform_percentage?: number
+          updated_at?: string | null
+          winners_percentage?: number
+        }
+        Relationships: []
+      }
       pix_payments: {
         Row: {
           amount: number
