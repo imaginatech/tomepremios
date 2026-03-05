@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { LoadingProvider } from "@/contexts/LoadingContext";
 import LoadingOverlay from "@/components/LoadingOverlay";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
@@ -23,21 +24,23 @@ const App = () => (
       <AuthProvider>
         <Toaster />
         <Sonner />
-        <LoadingOverlay>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/tome-premios" element={<TomePremios />} />
-              <Route path="/palpiteco" element={<Palpiteco />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/admin" element={<Admin />} />
-              <Route path="/admin/login" element={<AdminLogin />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </LoadingOverlay>
+        <BrowserRouter>
+          <LoadingProvider>
+            <LoadingOverlay>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/tome-premios" element={<TomePremios />} />
+                <Route path="/palpiteco" element={<Palpiteco />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/admin" element={<Admin />} />
+                <Route path="/admin/login" element={<AdminLogin />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </LoadingOverlay>
+          </LoadingProvider>
+        </BrowserRouter>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
