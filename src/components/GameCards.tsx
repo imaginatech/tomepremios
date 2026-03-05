@@ -4,9 +4,15 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trophy, HelpCircle, ArrowRight } from 'lucide-react';
+import { useLoading } from '@/contexts/LoadingContext';
 
 const GameCards = () => {
   const navigate = useNavigate();
+  const { triggerLoading } = useLoading();
+
+  const navigateWithLoading = (path: string) => {
+    triggerLoading(() => navigate(path));
+  };
 
   return (
     <section className="py-12 md:py-16">
@@ -22,7 +28,7 @@ const GameCards = () => {
           {/* Card Tome Prêmios */}
           <Card
             className="group cursor-pointer border-2 border-primary/20 hover:border-primary/60 transition-all duration-300 hover-lift overflow-hidden"
-            onClick={() => navigate('/tome-premios')}>
+            onClick={() => navigateWithLoading('/tome-premios')}>
 
             <div className="gradient-green p-6 text-center">
               <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -43,7 +49,7 @@ const GameCards = () => {
           {/* Card Palpiteco */}
           <Card
             className="group cursor-pointer border-2 border-accent/20 hover:border-accent/60 transition-all duration-300 hover-lift overflow-hidden"
-            onClick={() => navigate('/palpiteco')}>
+            onClick={() => navigateWithLoading('/palpiteco')}>
 
             <div className="bg-accent p-6 text-center">
               <div className="w-16 h-16 bg-accent-foreground/20 rounded-full flex items-center justify-center mx-auto mb-3">
