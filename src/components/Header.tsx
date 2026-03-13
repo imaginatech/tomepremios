@@ -7,7 +7,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import AuthModal from './AuthModal';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useLoading } from '@/contexts/LoadingContext';
 
 interface HeaderProps {
   affiliateCode?: string | null;
@@ -19,7 +18,6 @@ const Header: React.FC<HeaderProps> = ({ affiliateCode }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { triggerLoading } = useLoading();
 
   useEffect(() => {
     if (user) {
@@ -54,20 +52,20 @@ const Header: React.FC<HeaderProps> = ({ affiliateCode }) => {
     setShowAuthModal(false);
   };
 
-  const navigateWithLoading = (path: string) => {
-    if (location.pathname === path) return;
-    triggerLoading(() => navigate(path));
+  const handleDashboardClick = () => {
+    navigate('/dashboard');
   };
 
-  const handleDashboardClick = () => navigateWithLoading('/dashboard');
-  const handleAdminClick = () => navigateWithLoading('/admin');
-  const handleHomeClick = () => navigateWithLoading('/');
-  const handleAvatarClick = () => navigateWithLoading('/dashboard');
+  const handleAdminClick = () => {
+    navigate('/admin');
+  };
 
-  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
-    e.preventDefault();
-    if (location.pathname === path) return;
-    triggerLoading(() => navigate(path));
+  const handleHomeClick = () => {
+    navigate('/');
+  };
+
+  const handleAvatarClick = () => {
+    navigate('/dashboard');
   };
 
   return (
@@ -89,9 +87,9 @@ const Header: React.FC<HeaderProps> = ({ affiliateCode }) => {
 
             {/* Navigation - Desktop */}
             <nav className="hidden md:flex items-center space-x-6">
-              <a href="/" onClick={(e) => handleNavClick(e, '/')} className="text-foreground hover:text-primary transition-colors">Início</a>
-              <a href="/tome-premios" onClick={(e) => handleNavClick(e, '/tome-premios')} className="text-foreground hover:text-primary transition-colors">12 da Sorte</a>
-              <a href="/palpiteco" onClick={(e) => handleNavClick(e, '/palpiteco')} className="text-foreground hover:text-primary transition-colors">Palpitaco</a>
+              <a href="/" className="text-foreground hover:text-primary transition-colors">Início</a>
+              <a href="/tome-premios" className="text-foreground hover:text-primary transition-colors">12 da Sorte</a>
+              <a href="/palpiteco" className="text-foreground hover:text-primary transition-colors">Palpitaco</a>
             </nav>
 
             {/* User Actions */}
