@@ -93,7 +93,6 @@ const PalpitecoPaymentModal: React.FC<PalpitecoPaymentModalProps> = ({
           setPaymentStatus('confirmed');
           confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
           toast({ title: "Pagamento Confirmado! 🎉", description: "Seu palpite foi registrado!" });
-          setTimeout(onSuccess, 2000);
         }
       } catch (e) { console.error(e); }
     }, 3000);
@@ -125,7 +124,7 @@ const PalpitecoPaymentModal: React.FC<PalpitecoPaymentModalProps> = ({
               <p className="text-muted-foreground text-sm">Seu palpite "<strong>{optionLabel}</strong>" foi registrado para:</p>
               <p className="font-medium mt-1">{pollTitle}</p>
             </div>
-            <Button onClick={onClose} className="w-full">Continuar</Button>
+            <Button onClick={onSuccess} className="w-full">Continuar</Button>
           </div>
         </DialogContent>
       </Dialog>

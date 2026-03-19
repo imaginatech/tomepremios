@@ -164,10 +164,6 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
             title: "Pagamento Confirmado! 🎉",
             description: "Seus números foram reservados com sucesso!",
           });
-
-          setTimeout(() => {
-            onSuccess();
-          }, 2000);
         }
       } catch (error) {
         console.error('Erro no polling:', error);
@@ -293,7 +289,7 @@ const PixPaymentModal: React.FC<PixPaymentModalProps> = ({
             <div className="space-y-3">
               <AffiliateSignupButton />
 
-              <Button onClick={onClose} className="w-full">
+              <Button onClick={onSuccess} className="w-full">
                 Continuar
               </Button>
             </div>
