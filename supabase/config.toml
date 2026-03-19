@@ -43,7 +43,7 @@ verify_jwt = false
 [functions.process-affiliate-bonus]
 verify_jwt = false
 
-[functions.paggue-webhook]
+[functions.mercadopago-webhook]
 verify_jwt = false
 
 [functions.weekly-affiliate-payout]

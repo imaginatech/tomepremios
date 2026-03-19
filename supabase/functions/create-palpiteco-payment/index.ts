@@ -11,20 +11,13 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CREATE-PALPITECO-PAYMENT] ${step}${detailsStr}`);
 };
 
-const createSignature = async (payload: string, signatureToken: string): Promise<string> => {
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey('raw', encoder.encode(signatureToken), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(payload));
-  return Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('');
-};
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    logStep("Iniciando criação de pagamento Palpiteco");
+    logStep("Iniciando criação de pagamento Palpiteco via Mercado Pago");
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -47,7 +40,6 @@ serve(async (req) => {
       throw new Error("poll_id, selected_option e amount são obrigatórios");
     }
 
-    // Verificar se a enquete existe e está ativa
     const { data: poll, error: pollError } = await supabase
       .from('polls')
       .select('*')
@@ -57,7 +49,6 @@ serve(async (req) => {
 
     if (pollError || !poll) throw new Error("Enquete não encontrada ou não está ativa");
 
-    // Verificar se o usuário já participou desta enquete (com pagamento confirmado)
     const { data: existingEntry } = await supabase
       .from('poll_entries')
       .select('id')
@@ -68,61 +59,55 @@ serve(async (req) => {
 
     if (existingEntry) throw new Error("Você já participou desta enquete");
 
-    // Buscar secrets da Paggue
-    const clientKey = Deno.env.get("PAGGUE_CLIENT_KEY");
-    const clientSecret = Deno.env.get("PAGGUE_CLIENT_SECRET");
-    const companyId = Deno.env.get("PAGGUE_COMPANY_ID");
-    const signatureToken = Deno.env.get("PAGGUE_SIGNATURE_TOKEN");
+    const accessToken = Deno.env.get("MERCADOPAGO_ACCESS_TOKEN");
+    if (!accessToken) throw new Error("MERCADOPAGO_ACCESS_TOKEN não configurado");
 
-    if (!clientKey || !clientSecret || !companyId || !signatureToken) {
-      throw new Error("Secrets da Paggue não configurados");
-    }
-
-    // Autenticar na Paggue
-    const paggueAuthResponse = await fetch('https://ms.paggue.io/auth/v1/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ client_key: clientKey, client_secret: clientSecret }),
-    });
-
-    if (!paggueAuthResponse.ok) {
-      throw new Error(`Erro na autenticação Paggue: ${await paggueAuthResponse.text()}`);
-    }
-
-    const { access_token: accessToken } = await paggueAuthResponse.json();
-
-    // Criar cobrança PIX
-    const pixPaymentData = {
-      payer_name: user.user_metadata?.full_name || "Cliente",
-      amount: Math.round(amount * 100),
-      external_id: `palpiteco_${poll_id}_${user.id}_${Date.now()}`,
+    const externalReference = `palpiteco_${poll_id}_${user.id}_${Date.now()}`;
+    const mpPaymentData = {
+      transaction_amount: amount,
       description: `Palpiteco - ${poll.title}`,
-      meta: { user_id: user.id, poll_id, selected_option, type: 'palpiteco' },
+      payment_method_id: "pix",
+      payer: {
+        email: user.email || "pagador@tomepremios.com.br",
+        first_name: user.user_metadata?.full_name?.split(' ')[0] || "Cliente",
+        last_name: user.user_metadata?.full_name?.split(' ').slice(1).join(' ') || "Tome Prêmios",
+      },
+      external_reference: externalReference,
+      metadata: {
+        user_id: user.id,
+        poll_id,
+        selected_option,
+        type: 'palpiteco',
+      },
+      date_of_expiration: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
     };
 
-    const payloadString = JSON.stringify(pixPaymentData);
-    const signature = await createSignature(payloadString, signatureToken);
+    logStep("Criando pagamento no Mercado Pago", { external_reference: externalReference });
 
-    const pagguePaymentResponse = await fetch('https://ms.paggue.io/cashin/api/billing_order', {
+    const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${accessToken}`,
-        'X-Company-ID': companyId,
-        'Signature': signature,
+        'X-Idempotency-Key': externalReference,
       },
-      body: payloadString,
+      body: JSON.stringify(mpPaymentData),
     });
 
-    if (!pagguePaymentResponse.ok) {
-      throw new Error(`Erro ao criar cobrança: ${await pagguePaymentResponse.text()}`);
+    if (!mpResponse.ok) {
+      const errorText = await mpResponse.text();
+      throw new Error(`Erro ao criar pagamento no Mercado Pago: ${errorText}`);
     }
 
-    const paymentResult = await pagguePaymentResponse.json();
-    logStep("Resposta Paggue", { hash: paymentResult.hash });
+    const mpResult = await mpResponse.json();
+    logStep("Resposta do Mercado Pago", { id: mpResult.id, status: mpResult.status });
 
-    // Salvar pagamento PIX - usar raffle_id do primeiro sorteio ativo ou criar sem
-    // Precisamos de um raffle_id para a tabela pix_payments, vamos buscar o ativo
+    const pixCode = mpResult.point_of_interaction?.transaction_data?.qr_code;
+    const qrCodeBase64 = mpResult.point_of_interaction?.transaction_data?.qr_code_base64;
+    const mpPaymentId = String(mpResult.id);
+
+    if (!pixCode) throw new Error("Código PIX não retornado pelo Mercado Pago");
+
     const { data: activeRaffle } = await supabase
       .from('raffles')
       .select('id')
@@ -137,17 +122,17 @@ serve(async (req) => {
         raffle_id: activeRaffle?.id || '00000000-0000-0000-0000-000000000000',
         selected_numbers: [selected_option],
         amount,
-        paggue_transaction_id: paymentResult.hash,
-        pix_code: paymentResult.payment,
+        mp_payment_id: mpPaymentId,
+        pix_code: pixCode,
+        qr_code_image: qrCodeBase64 ? `data:image/png;base64,${qrCodeBase64}` : null,
         status: 'pending',
-        expires_at: paymentResult.expiration_at || new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+        expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
       })
       .select()
       .single();
 
     if (insertError) throw new Error(`Erro ao salvar pagamento: ${insertError.message}`);
 
-    // Criar entrada na poll_entries como pendente
     const { error: entryError } = await supabase.from('poll_entries').insert({
       poll_id,
       user_id: user.id,
@@ -160,7 +145,12 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({
       success: true,
-      payment: { id: pixPayment.id, pix_code: pixPayment.pix_code, amount: pixPayment.amount },
+      payment: {
+        id: pixPayment.id,
+        pix_code: pixPayment.pix_code,
+        qr_code_image: pixPayment.qr_code_image,
+        amount: pixPayment.amount,
+      },
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
